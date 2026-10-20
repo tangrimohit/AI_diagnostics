@@ -1,0 +1,2521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AKARI — Projector Diagnostic Assistant</title>
+<meta name="description" content="Projector diagnostic assistant for Epson service engineers." />
+<link id="favicon" rel="icon" type="image/svg+xml" href="/assets/logo/mark.svg" />
+<link rel="apple-touch-icon" href="/assets/pwa/icon-180.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#FAF8F4" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="AKARI" />
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {});
+    });
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" />
+<style>
+  :root {
+    /* Static cross-theme values */
+    --warn-amber:   #D69D3F;
+    --warn-amber-soft: rgba(214, 157, 63, 0.14);
+    --good:         #3F7A4D;
+    --good-soft:    rgba(63, 122, 77, 0.12);
+    --bad:          #A04030;
+    --bad-soft:     rgba(160, 64, 48, 0.10);
+
+    --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-jp:      "Noto Sans JP", "Inter", -apple-system, sans-serif;
+    --font-mono:    "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  /* AKARI Light (default) */
+  body.theme-akari-light {
+    --paper:      #FAF8F4;
+    --surface:    #FFFFFF;
+    --ink:        #1A1A1A;
+    --akari:      #D69D3F;
+    --muted:      #807468;
+    --akari-soft: rgba(214, 157, 63, 0.12);
+    --akari-glow: rgba(214, 157, 63, 0.35);
+    --ink-soft:   rgba(26, 26, 26, 0.06);
+    --hairline:   rgba(26, 26, 26, 0.10);
+    --logo-dot:   var(--akari);
+    --logo-ink:   var(--ink);
+    --logo-muted: var(--muted);
+  }
+
+  /* AKARI Dark */
+  body.theme-akari-dark {
+    --paper:      #1A1A1A;
+    --surface:    #2A2520;
+    --ink:        #FAF8F4;
+    --akari:      #FFC865;
+    --muted:      #807468;
+    --akari-soft: rgba(255, 200, 101, 0.14);
+    --akari-glow: rgba(255, 200, 101, 0.42);
+    --ink-soft:   rgba(250, 248, 244, 0.06);
+    --hairline:   rgba(250, 248, 244, 0.14);
+    --logo-dot:   var(--akari);
+    --logo-ink:   var(--ink);
+    --logo-muted: var(--muted);
+  }
+
+  /* Epson */
+  body.theme-epson {
+    --paper:      #FFFFFF;
+    --surface:    #F5F5F5;
+    --ink:        #1A1A1A;
+    --akari:      #003399;
+    --muted:      #666666;
+    --akari-soft: rgba(0, 51, 153, 0.08);
+    --akari-glow: rgba(0, 51, 153, 0.30);
+    --ink-soft:   rgba(26, 26, 26, 0.05);
+    --hairline:   rgba(26, 26, 26, 0.14);
+    --logo-dot:   var(--akari);
+    --logo-ink:   var(--ink);
+    --logo-muted: var(--muted);
+  }
+
+  /* During an explicit theme swap, cross-fade all themed surfaces for 200ms.
+     Outside the swap window, interactive elements keep their own (faster)
+     hover transitions so this doesn't slow buttons down. */
+  body.theme-transitioning, body.theme-transitioning * {
+    transition: background-color 200ms ease, color 200ms ease,
+                border-color 200ms ease, fill 200ms ease,
+                opacity 200ms ease !important;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ─────────── Header ─────────── */
+  .header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--hairline);
+    padding: 18px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+  .header .logo {
+    display: block;
+    width: 280px;
+    height: auto;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Theme selector */
+  .theme-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 50%;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.18s, color 0.18s, background 0.18s;
+  }
+  .theme-btn:hover {
+    border-color: var(--akari);
+    color: var(--akari);
+    background: var(--akari-soft);
+  }
+  .theme-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+  .theme-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 36px;
+    width: 240px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 12px 0 8px 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    z-index: 50;
+  }
+  .theme-menu .menu-label {
+    padding: 0 16px 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 6px;
+  }
+  .theme-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 16px;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    text-align: left;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 400;
+    transition: background 0.15s;
+  }
+  .theme-row:hover { background: var(--ink-soft); }
+  .theme-row .swatches {
+    display: inline-flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .theme-row .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline);
+  }
+  .theme-row .name { flex: 1; }
+  .theme-row .check {
+    color: var(--akari);
+    font-size: 14px;
+    width: 14px;
+    text-align: right;
+    visibility: hidden;
+  }
+  .theme-row.active .check { visibility: visible; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-dot.ok       { background: var(--good); }
+  .status-dot.degraded { background: var(--akari); }
+  .status-dot.down     { background: var(--bad); }
+
+  /* ─────────── Layout ─────────── */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 38% 1fr;
+    min-height: 0;
+  }
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  .panel-left {
+    background: var(--paper);
+    padding: 36px;
+    border-right: 1px solid var(--hairline);
+    overflow-y: auto;
+  }
+  .panel-right {
+    background: var(--surface);
+    padding: 36px;
+    overflow-y: auto;
+  }
+  @media (max-width: 900px) {
+    .panel-left { border-right: 0; border-bottom: 1px solid var(--hairline); }
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0 0 22px 0;
+  }
+
+  /* ─────────── Form ─────────── */
+  .form-group { margin-bottom: 26px; }
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  textarea:focus, input:focus {
+    border-color: var(--akari);
+    box-shadow: 0 0 0 3px var(--akari-soft);
+  }
+  textarea {
+    min-height: 180px;
+    resize: vertical;
+  }
+  textarea::placeholder, input::placeholder {
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  /* Projector model dropdown */
+  .model-select {
+    width: 100%;
+    padding: 11px 12px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .model-select:focus {
+    border-color: var(--akari);
+    box-shadow: 0 0 0 3px var(--akari-soft);
+  }
+
+  /* Searchable projector model combobox */
+  .model-combo { position: relative; }
+  .model-combo-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 11px 12px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .model-combo-trigger:focus {
+    outline: none;
+    border-color: var(--akari);
+    box-shadow: 0 0 0 3px var(--akari-soft);
+  }
+  .model-combo-trigger.placeholder { color: var(--muted); }
+  .combo-caret { color: var(--muted); font-size: 12px; flex: none; }
+  .model-combo-pop {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+  }
+  .model-combo-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface);
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+  }
+  .model-combo-search::placeholder { color: var(--muted); }
+  .model-combo-list { max-height: 280px; overflow-y: auto; padding: 4px; }
+  .combo-group { padding: 2px 0; }
+  .combo-group-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 6px 10px 3px;
+  }
+  .combo-opt {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+  }
+  .combo-opt.hl { background: var(--ink-soft); }
+  .combo-opt.sel { color: var(--akari); font-weight: 600; }
+  .combo-opt.all-opt { font-weight: 500; }
+  .opt-note { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .combo-empty {
+    padding: 14px 12px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Response depth segmented control */
+  .depth-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .depth-pill {
+    padding: 11px 12px;
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--hairline);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.18s;
+  }
+  .depth-pill:last-child { border-right: 0; }
+  .depth-pill:hover:not(.active) { background: var(--ink-soft); }
+  .depth-pill.active {
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 500;
+  }
+  .depth-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  /* File upload */
+  .file-drop {
+    display: block;
+    padding: 16px 14px;
+    background: var(--surface);
+    border: 1px dashed var(--hairline);
+    border-radius: 4px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .file-drop:hover {
+    border-color: var(--akari);
+    color: var(--ink);
+  }
+  .file-drop input { display: none; }
+  .file-attached {
+    color: var(--akari);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    margin-top: 6px;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--akari);
+    color: var(--ink);
+    border: none;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #C68D2F;
+    box-shadow: 0 4px 14px var(--akari-glow);
+  }
+  .btn-primary:disabled {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--hairline);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ─────────── Empty state ─────────── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    padding: 40px;
+  }
+  .empty-state .kanji {
+    font-family: var(--font-jp);
+    font-size: 130px;
+    font-weight: 300;
+    color: var(--akari);
+    opacity: 0.6;
+    line-height: 1;
+    margin: 0 0 38px 0;
+    user-select: none;
+  }
+  .empty-state .slogan {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1.4;
+    margin: 0 0 18px 0;
+    letter-spacing: 0.01em;
+  }
+  .empty-state .lead {
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 460px;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* ─────────── Loading state ─────────── */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 22px;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .loading-state .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    align-self: stretch;
+  }
+  .loading-state .head-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--akari);
+    animation: akari-pulse 1.6s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes akari-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.85); }
+    50%      { opacity: 1.0;  transform: scale(1.15); box-shadow: 0 0 12px var(--akari-glow); }
+  }
+  .loading-state .head-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: 0.02em;
+  }
+  .loading-state .head-elapsed {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-self: stretch;
+    margin-top: 4px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .step .step-mark {
+    font-size: 13px;
+    line-height: 1;
+    text-align: center;
+    align-self: center;
+    user-select: none;
+  }
+  .step.pending .step-mark { color: var(--muted); opacity: 0.5; }
+  .step.pending .step-text { color: var(--muted); }
+  .step.active  .step-mark { color: var(--akari); animation: step-spin 1.4s linear infinite; }
+  .step.active  .step-text { color: var(--ink); font-weight: 500; }
+  .step.done    .step-mark { color: var(--akari); }
+  .step.done    .step-text { color: var(--ink); }
+  @keyframes step-spin {
+    0%   { transform: rotate(0deg);   }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* ─────────── Diagnosis card ─────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 28px 32px;
+    margin-bottom: 22px;
+  }
+  .card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 18px 0;
+    gap: 12px;
+  }
+  .card-title h2 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .conf-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .conf-pill.high { background: var(--akari-soft); color: var(--akari); }
+  .conf-pill.med  { background: var(--ink-soft);   color: var(--muted); }
+  .conf-pill.low  { background: var(--bad-soft);   color: var(--bad); }
+
+  /* IPS log analysis section + ask-for-log callout */
+  .sev-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .sev-pill.critical, .sev-pill.high { background: var(--bad-soft);   color: var(--bad); }
+  .sev-pill.medium                   { background: var(--akari-soft); color: var(--akari); }
+  .sev-pill.low, .sev-pill.info      { background: var(--ink-soft);   color: var(--muted); }
+  .ips-summary { font-size: 15px; color: var(--ink); line-height: 1.6; white-space: pre-wrap; }
+  .ips-findings { margin: 12px 0 0; padding: 0; list-style: none; }
+  .ips-findings li {
+    font-size: 13.5px; color: var(--ink); line-height: 1.55;
+    padding: 7px 0 7px 16px; position: relative;
+    border-top: 1px solid var(--ink-soft);
+  }
+  .ips-findings li:first-child { border-top: none; }
+  .ips-findings li::before { content: "›"; position: absolute; left: 0; color: var(--muted); }
+  .ask-log {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--akari-soft); border: 1px solid var(--akari);
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 18px;
+  }
+  .ask-log .ask-ico { font-size: 20px; line-height: 1.2; }
+  .ask-log .ask-body { flex: 1; }
+  .ask-log .ask-msg { font-size: 14px; color: var(--ink); line-height: 1.55; }
+  .ask-log .ask-btn {
+    margin-top: 10px; font: inherit; font-size: 13px; font-weight: 600;
+    color: var(--akari); background: transparent; border: 1px solid var(--akari);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  }
+  .ask-log .ask-btn:hover { background: var(--akari); color: var(--bg, #fff); }
+  .ask-log a.ask-btn { text-decoration: none; display: inline-block; }
+  .ips-upload-flash { animation: ips-flash 1.4s ease-out; }
+  /* Condition Diagnosis value panel (Phase B) */
+  .cd-panel { border: 1px solid var(--hairline); border-radius: 4px; background: var(--surface); }
+  .cd-panel summary {
+    cursor: pointer; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  .cd-panel summary::-webkit-details-marker { display: none; }
+  .cd-panel summary .cd-chev { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .cd-panel[open] summary .cd-chev { transform: rotate(90deg); }
+  .cd-panel .cd-body { padding: 4px 14px 14px; border-top: 1px solid var(--hairline); }
+  .cd-hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 8px 0 10px; }
+  .cd-hint a { color: var(--akari); }
+  .cd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .cd-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  .cd-grid input, .cd-grid select {
+    width: 100%; padding: 8px 10px; background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: 4px; font-family: var(--font-display); font-size: 13px; color: var(--ink); outline: none;
+  }
+  .cd-grid input:focus, .cd-grid select:focus { border-color: var(--akari); box-shadow: 0 0 0 3px var(--akari-soft); }
+  .cd-grid .cd-wide { grid-column: 1 / -1; }
+  .cd-check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink); }
+  .cd-check input { width: auto; }
+  .cd-actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+  .cd-clear { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .cd-set { font-size: 12px; color: var(--akari); font-weight: 600; }
+  .cd-sub-panel { margin-top: 12px; border-top: 1px dashed var(--hairline); padding-top: 8px; }
+  .cd-sub-panel summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); list-style: none; }
+  .cd-sub-panel summary::-webkit-details-marker { display: none; }
+  .cd-sub-panel summary::before { content: "▸ "; }
+  .cd-sub-panel[open] summary::before { content: "▾ "; }
+  .cd-pts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px; }
+  .cd-calc { font-size: 13px; color: var(--ink); padding: 4px 0; }
+  /* Condition Diagnosis verdict card */
+  .cd-verdict { font-size: 15px; color: var(--ink); line-height: 1.6; }
+  .cd-list { margin: 12px 0 0; padding-left: 20px; }
+  .cd-list li { padding: 3px 0; font-size: 14px; line-height: 1.55; color: var(--ink); }
+  .cd-sub { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 14px; }
+  .cd-caveat { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .cd-values { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .cd-link { display: inline-block; margin-top: 12px; font-size: 13px; color: var(--akari); }
+  .sev-pill.reference { background: var(--akari-soft); color: var(--akari); }
+  .sev-pill.lsm, .sev-pill.oe, .sev-pill.lsm_and_oe, .sev-pill.lddr { background: var(--bad-soft); color: var(--bad); }
+  .sev-pill.no_part { background: var(--ink-soft); color: var(--muted); }
+  .sev-pill.calibrate_first, .sev-pill.inconclusive, .sev-pill.oe_or_ma { background: var(--akari-soft); color: var(--akari); }
+  @keyframes ips-flash {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    25% { box-shadow: 0 0 0 3px var(--akari-soft); }
+  }
+
+  .diag-body {
+    font-size: 16px;
+    color: var(--ink);
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+  .diag-body code, .diag-reasoning code {
+    background: var(--ink-soft);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  .diag-body pre, .diag-reasoning pre {
+    background: var(--ink-soft);
+    padding: 12px 14px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  .diag-reasoning {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--hairline);
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  /* ─────────── Solutions ─────────── */
+  .solutions-section { margin-bottom: 22px; }
+  .solutions-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 14px;
+    padding-left: 4px;
+  }
+  .solution {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .solution-head {
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 32px 1fr 18px;
+    gap: 16px;
+    align-items: start;
+    cursor: pointer;
+    transition: background 0.18s;
+  }
+  .solution-head:hover { background: var(--ink-soft); }
+  .solution-rank {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .solution-action {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  .caret {
+    color: var(--muted);
+    font-size: 16px;
+    transition: transform 0.18s, color 0.18s;
+    align-self: center;
+  }
+  .caret.open { transform: rotate(90deg); color: var(--akari); }
+
+  /* Three-column meta block (DIFFICULTY / COST / TIME) */
+  .solution-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 28px;
+    padding: 0 22px 18px 70px;
+  }
+  @media (max-width: 700px) {
+    .solution-meta {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding-left: 22px;
+    }
+  }
+  .meta-col .meta-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 8px 0;
+  }
+  .meta-col .meta-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.2;
+  }
+  .meta-col .meta-value .cost-usd {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .bars {
+    display: inline-flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .bar-seg {
+    width: 14px;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--muted);
+    opacity: 0.2;
+  }
+  .bar-seg.fill-good  { background: var(--good);       opacity: 1; }
+  .bar-seg.fill-akari { background: var(--warn-amber); opacity: 1; }
+  .bar-seg.fill-bad   { background: var(--bad);        opacity: 1; }
+
+  .solution-body {
+    padding: 20px 22px 22px 70px;
+    border-top: 1px solid var(--hairline);
+    background: var(--paper);
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  @media (max-width: 700px) {
+    .solution-body { padding-left: 22px; }
+  }
+  .body-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .body-label:first-child { margin-top: 0; }
+  .body-value { color: var(--ink); font-size: 13px; line-height: 1.7; }
+
+  /* ─────────── Escalation ─────────── */
+  .escalation {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .escalation-head {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .escalation-head h3 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .btn-copy {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-copy:hover {
+    border-color: var(--akari);
+    color: var(--akari);
+  }
+  .btn-copy.copied {
+    border-color: var(--good);
+    color: var(--good);
+  }
+  .escalation-body {
+    padding: 18px 22px;
+    font-size: 13px;
+  }
+  .escalation-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 18px;
+    padding: 8px 0;
+  }
+  .escalation-row .k {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    align-self: start;
+    margin-top: 2px;
+  }
+  .escalation-row .v {
+    color: var(--ink);
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+  .escalation-row .v.empty {
+    color: var(--muted);
+    opacity: 0.7;
+    font-style: italic;
+  }
+  /* Engineer-input gaps: highlighted so the engineer sees exactly what to fill. */
+  .needs-input {
+    background: var(--warn-amber-soft);
+    color: var(--ink);
+    box-shadow: inset 2px 0 0 var(--warn-amber);
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-style: italic;
+  }
+  .escalation-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--warn-amber-soft);
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .needs-input-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--warn-amber);
+    flex: none;
+  }
+
+  /* ─────────── Disclaimer ─────────── */
+  .disclaimer {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 22px;
+  }
+  .disclaimer .d-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 10px 0;
+  }
+  .disclaimer .d-body {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ─────────── Feedback ─────────── */
+  .feedback {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 26px 28px;
+    margin-bottom: 22px;
+  }
+  .feedback h3 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0 0 14px 0;
+  }
+  .feedback-notice {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-left: 2px solid var(--akari);
+    border-radius: 3px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+  .feedback-question {
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  .feedback-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .fb-btn {
+    padding: 12px 16px;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .fb-btn:hover:not(.active) { background: var(--ink-soft); }
+  .fb-btn.active.worked {
+    background: var(--good-soft);
+    border-color: var(--good);
+    color: var(--good);
+  }
+  .fb-btn.active.didnt {
+    background: var(--bad-soft);
+    border-color: var(--bad);
+    color: var(--bad);
+  }
+  .fb-fields { margin-top: 6px; }
+  .fb-fields .form-group { margin-bottom: 14px; }
+  .fb-fields textarea { min-height: 80px; }
+  .fb-select { width: 100%; padding: 10px 12px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 4px; font-family: var(--font-display); font-size: 14px; color: var(--ink); }
+  .fb-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .fb-actions .btn-primary { flex: 0 0 auto; padding: 12px 24px; width: auto; }
+  .btn-secondary, .btn-danger {
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-secondary { color: var(--muted); }
+  .btn-secondary:hover { border-color: var(--akari); color: var(--akari); }
+  .btn-danger    { color: var(--bad); }
+  .btn-danger:hover { background: var(--bad-soft); border-color: var(--bad); }
+
+  .feedback-confirm {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 24px 28px;
+  }
+  .feedback-confirm .check {
+    color: var(--good);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .feedback-confirm .link {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    word-break: break-all;
+  }
+  .feedback-confirm .link a {
+    color: var(--akari);
+    text-decoration: none;
+  }
+  .feedback-confirm .link a:hover { text-decoration: underline; }
+
+  /* ─────────── Error ─────────── */
+  .error-box {
+    padding: 12px 16px;
+    background: var(--bad-soft);
+    border: 1px solid rgba(160, 64, 48, 0.25);
+    border-left: 2px solid var(--bad);
+    border-radius: 4px;
+    color: var(--bad);
+    font-size: 13px;
+    margin-top: 14px;
+  }
+
+  /* ─────────── Footer ─────────── */
+  .footer {
+    padding: 18px 36px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--paper);
+    letter-spacing: 0.04em;
+  }
+  .footer .right {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .footer .footer-kanji {
+    font-family: var(--font-jp);
+    color: var(--akari);
+    opacity: 0.55;
+  }
+
+  /* ─────────── Scrollbars ─────────── */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--paper); }
+  ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+<script>
+  // Pre-paint theme bootstrap: avoids flash of unthemed content.
+  // Mirror of initialTheme() in the React App below; must stay in sync.
+  (function () {
+    try {
+      var stored = localStorage.getItem("akari-theme");
+      var t = (stored === "akari-light" || stored === "akari-dark" || stored === "epson")
+        ? stored
+        : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "akari-dark"
+            : "akari-light");
+      document.body.classList.add("theme-" + t);
+      var fav = document.getElementById("favicon");
+      var map = { "akari-light": "/assets/logo/mark.svg",
+                  "akari-dark":  "/assets/logo/mark-dark.svg",
+                  "epson":       "/assets/logo/mark-epson.svg" };
+      if (fav && map[t]) fav.href = map[t];
+    } catch (e) {
+      document.body.classList.add("theme-akari-light");
+    }
+  })();
+</script>
+<div id="root"></div>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+// Response depth → backend payload mapping.
+// Single source of truth per spec §4; adjust here when hardware/backend changes.
+// Current backend ties use_thinking to model selection (no decoupling without backend change);
+// Balanced and Deep produce the same call today on 4 GB VRAM hardware.
+// Swap Deep to a heavier preset (e.g. an explicit override of the model field) once
+// hardware/backend allows.
+const DEPTH_PRESETS = {
+  Fast:     { payload: { use_thinking: false }, hint: "Quick response, common issues" },
+  Balanced: { payload: { use_thinking: true  }, hint: "Recommended for most cases" },
+  Deep:     { payload: { use_thinking: true  }, hint: "Thorough analysis, slower" },
+};
+const DEPTH_DEFAULT = "Balanced";
+
+// Target models grouped by family. Selecting one isolates the diagnosis to that
+// model and its family; "All models" searches across everything.
+const MODEL_GROUPS = [
+  { label: "Lamp 3LCD (X49 family)", models: ["EB-X49", "EB-FH52", "EB-992F", "EB-982W", "EB-W51", "EB-W49", "EB-W06", "EB-E20"] },
+  { label: "Large-venue laser", models: ["EB-PU2220B", "EB-PU2216B", "EB-PU2213B", "EB-PU2010B", "EB-PU1008B", "EB-PU1007B"] },
+  { label: "Interactive ultra-short-throw", models: ["EB-1485Fi", "EB-1481Fi", "EB-725Wi", "EB-760Wi", "EB-770Fi"] },
+  { label: "Installation and home laser", models: ["EB-L200F", "EB-L260F", "EH-LS650B"] },
+  { label: "Portable", models: ["CO-W01", "CO-FH02", "CO-FH01"] },
+  { label: "4K large-venue laser", models: ["EB-PQ2220B", "EB-PQ2216B", "EB-PQ2213B", "EB-PQ2010B", "EB-PQ2008B"] },
+  { label: "Home cinema", models: ["EH-TW6250"] },
+  { label: "Large-venue installation laser (L1000)", models: ["EB-L1075U", "EB-L1070U", "EB-L1070W", "EB-L1060U", "EB-L1050U", "EB-L1755U", "EB-L1750U"] },
+  { label: "Home 4K laser", models: ["EH-QB1000W", "EH-LS12000B", "EH-LS11000W", "EH-LS9000B"] },
+  { label: "Lifestyle EF", models: ["EF-12", "EF-11", "EF-10", "EF-100"] },
+  { label: "Home laser UST", models: ["EH-LS970B", "EH-LS670B", "EH-LS800B", "EH-LS300B", "EH-LS500B"] },
+  { label: "Installation laser (L500/L600)", models: ["EB-L610U", "EB-L615U", "EB-L510U", "EB-L400U", "EB-L610W", "EB-L500W"] },
+  { label: "Installation laser (L530U / L730U / L890)", models: ["EB-L730U", "EB-L630U", "EB-L530U", "EB-L520U", "EB-L890U"] },
+];
+
+function confidenceTier(c) {
+  const n = Number(c) || 0;
+  if (n >= 0.75) return { cls: "high", label: "High" };
+  if (n >= 0.5)  return { cls: "med",  label: "Medium" };
+  return { cls: "low", label: "Low" };
+}
+
+function statusFromHealth(h) {
+  if (!h)               return { dot: "",         label: "Checking" };
+  if (h.status === "ok")return { dot: "ok",       label: "Ready" };
+  return { dot: "down", label: "Unavailable" };
+}
+
+// Inline SVG primary lockup. Kept in sync manually with ui/assets/logo/primary.svg.
+// Inlined (rather than <img>-loaded) so CSS variables from the parent theme
+// cascade into the SVG's fills (theming a standalone <img>-loaded SVG isn't
+// possible — vars don't cross document boundaries).
+function PrimaryLogo() {
+  return (
+    <svg className="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 160" role="img" aria-label="AKARI — Bringing light to every case">
+      <circle cx="60" cy="40" r="32" opacity="0.10" fill="var(--logo-dot, #D69D3F)" />
+      <circle cx="60" cy="40" r="20" opacity="0.25" fill="var(--logo-dot, #D69D3F)" />
+      <circle cx="60" cy="40" r="11" fill="var(--logo-dot, #D69D3F)" />
+      <text x="60" y="118" fontSize="32" textAnchor="middle"
+            fill="var(--logo-ink, #1A1A1A)"
+            style={{fontFamily: '"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif', fontWeight: 400}}>
+        明かり
+      </text>
+      <text x="138" y="100" fontSize="26"
+            fill="var(--logo-ink, #1A1A1A)"
+            style={{fontFamily: '"Inter","Segoe UI","Helvetica Neue",sans-serif', fontWeight: 200, letterSpacing: '5px'}}>
+        AKARI
+      </text>
+      <text x="138" y="122" fontSize="11"
+            fill="var(--logo-muted, #807468)"
+            style={{fontFamily: '"Inter","Segoe UI","Helvetica Neue",sans-serif', fontWeight: 400}}>
+        Bringing light to every case
+      </text>
+    </svg>
+  );
+}
+
+// Three small overlapping circles in a triangular palette shape.
+function PaletteIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
+      <circle cx="5" cy="6" r="2.6" />
+      <circle cx="11" cy="6" r="2.6" />
+      <circle cx="8" cy="11" r="2.6" />
+    </svg>
+  );
+}
+
+const THEMES = [
+  { id: "akari-light", label: "AKARI Light", swatches: ["#FAF8F4", "#FFFFFF", "#D69D3F"] },
+  { id: "akari-dark",  label: "AKARI Dark",  swatches: ["#1A1A1A", "#2A2520", "#FFC865"] },
+  { id: "epson",       label: "Epson",       swatches: ["#FFFFFF", "#F5F5F5", "#003399"] },
+];
+
+const FAVICON_BY_THEME = {
+  "akari-light": "/assets/logo/mark.svg",
+  "akari-dark":  "/assets/logo/mark-dark.svg",
+  "epson":       "/assets/logo/mark-epson.svg",
+};
+
+function ThemeSelector({ theme, setTheme }) {
+  const [open, setOpen] = useState(false);
+
+  // Close on outside click or Esc.
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e) {
+      if (!e.target.closest(".theme-btn") && !e.target.closest(".theme-menu")) {
+        setOpen(false);
+      }
+    }
+    function onKey(e) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function pick(id) {
+    setTheme(id);
+    setOpen(false);
+  }
+
+  return (
+    <React.Fragment>
+      <button
+        type="button"
+        className="theme-btn"
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label="Theme"
+        title="Theme"
+      >
+        <PaletteIcon />
+      </button>
+      {open && (
+        <div className="theme-menu" role="menu">
+          <div className="menu-label">Theme</div>
+          {THEMES.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              role="menuitem"
+              className={"theme-row" + (t.id === theme ? " active" : "")}
+              onClick={() => pick(t.id)}
+            >
+              <span className="swatches" aria-hidden="true">
+                {t.swatches.map((c, i) => (
+                  <span key={i} className="swatch" style={{background: c}}></span>
+                ))}
+              </span>
+              <span className="name">{t.label}</span>
+              <span className="check" aria-hidden="true">✓</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+
+function Header({ health, theme, setTheme }) {
+  const s = statusFromHealth(health);
+  return (
+    <header className="header">
+      <PrimaryLogo />
+      <div className="header-right">
+        <ThemeSelector theme={theme} setTheme={setTheme} />
+        <div className="status-pill" role="status" aria-label={"Status: " + s.label}>
+          <span className={"status-dot " + s.dot}></span>
+          <span>{s.label}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function DepthSelector({ value, onChange }) {
+  const options = Object.keys(DEPTH_PRESETS);
+  return (
+    <div className="form-group">
+      <span className="field-label">Response depth</span>
+      <div className="depth-row" role="radiogroup" aria-label="Response depth">
+        {options.map(opt => (
+          <button
+            key={opt}
+            type="button"
+            role="radio"
+            aria-checked={opt === value}
+            className={"depth-pill" + (opt === value ? " active" : "")}
+            onClick={() => onChange(opt)}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      <div className="depth-hint">{DEPTH_PRESETS[value].hint}</div>
+    </div>
+  );
+}
+
+function ModelSelector({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const inputRef = useRef(null);
+
+  // Filter the grouped model list by the typed query. A model matches on its own
+  // name or on its family label, so "laser" surfaces the whole laser group.
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const showAll = !q || "all models".includes(q) || "everything".includes(q);
+    const groups = [];
+    MODEL_GROUPS.forEach(g => {
+      const models = g.models.filter(
+        m => !q || m.toLowerCase().includes(q) || g.label.toLowerCase().includes(q)
+      );
+      if (models.length) groups.push({ label: g.label, models });
+    });
+    return { showAll, groups };
+  }, [query]);
+
+  // Flat list of selectable values in render order, for arrow-key navigation.
+  const flat = useMemo(() => {
+    const arr = [];
+    if (filtered.showAll) arr.push("all");
+    filtered.groups.forEach(g => g.models.forEach(m => arr.push(m)));
+    return arr;
+  }, [filtered]);
+
+  // Reset the highlight whenever the visible set changes.
+  useEffect(() => { setActive(0); }, [query, open]);
+
+  // Close on outside click; focus the search box on open. (Esc handled on input.)
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e) {
+      if (!e.target.closest(".model-combo")) setOpen(false);
+    }
+    document.addEventListener("click", onDocClick);
+    if (inputRef.current) inputRef.current.focus();
+    return () => document.removeEventListener("click", onDocClick);
+  }, [open]);
+
+  function pick(v) {
+    onChange(v);
+    setOpen(false);
+    setQuery("");
+  }
+
+  function onKey(e) {
+    if (e.key === "Escape") { setOpen(false); return; }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive(a => Math.min(a + 1, flat.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive(a => Math.max(a - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (flat[active]) pick(flat[active]);
+    }
+  }
+
+  const displayLabel = value === "all" ? "All models" : value;
+
+  return (
+    <div className="form-group">
+      <label className="field-label" htmlFor="model-combo-trigger">Projector model</label>
+      <div className="model-combo">
+        <button
+          type="button"
+          id="model-combo-trigger"
+          className={"model-combo-trigger" + (value ? "" : " placeholder")}
+          onClick={() => setOpen(o => !o)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span>{displayLabel || "Select a model…"}</span>
+          <span className="combo-caret" aria-hidden="true">▾</span>
+        </button>
+        {open && (
+          <div className="model-combo-pop" role="listbox">
+            <input
+              ref={inputRef}
+              type="text"
+              className="model-combo-search"
+              placeholder="Type to filter (e.g. PU2220, X49, laser)"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={onKey}
+            />
+            <div className="model-combo-list">
+              {filtered.showAll && (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={value === "all"}
+                  className={"combo-opt all-opt"
+                    + (flat[active] === "all" ? " hl" : "")
+                    + (value === "all" ? " sel" : "")}
+                  onMouseEnter={() => setActive(flat.indexOf("all"))}
+                  onClick={() => pick("all")}
+                >
+                  <span>All models</span>
+                  <span className="opt-note">search everything</span>
+                </button>
+              )}
+              {filtered.groups.map(g => (
+                <div key={g.label} className="combo-group">
+                  <div className="combo-group-label">{g.label}</div>
+                  {g.models.map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      role="option"
+                      aria-selected={value === m}
+                      className={"combo-opt"
+                        + (flat[active] === m ? " hl" : "")
+                        + (value === m ? " sel" : "")}
+                      onMouseEnter={() => setActive(flat.indexOf(m))}
+                      onClick={() => pick(m)}
+                    >
+                      <span>{m}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+              {!filtered.showAll && filtered.groups.length === 0 && (
+                <div className="combo-empty">No models match "{query}"</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="depth-hint">Required. Pick the product to isolate the diagnosis, or All models to search everything.</div>
+    </div>
+  );
+}
+
+function FileUpload({ name, onChange }) {
+  return (
+    <div className="form-group" id="ips-upload">
+      <span className="field-label">IPS Tool log (optional)</span>
+      <label className="file-drop">
+        <input type="file" accept=".tsv,.txt,.log" onChange={onChange} />
+        <div>{name ? "✓ Attached" : "Click to attach .tsv"}</div>
+        {name && <div className="file-attached">{name}</div>}
+      </label>
+    </div>
+  );
+}
+
+function PhotoUpload({ name, onChange }) {
+  return (
+    <div className="form-group" id="photo-upload">
+      <span className="field-label">Photo of the symptom (optional)</span>
+      <label className="file-drop">
+        <input type="file" accept="image/*" onChange={onChange} />
+        <div>{name ? "✓ Attached" : "Click to attach a photo"}</div>
+        {name && <div className="file-attached">{name}</div>}
+      </label>
+    </div>
+  );
+}
+
+// Bar-segment severity mapping. 5 segments total, "fill" segments take the
+// semantic color; the rest are muted. Mapping per spec:
+//   difficulty: easy → 2 good, medium → 3 akari, hard → 4 bad
+//   cost: free → 1 good, low → 2 good, medium → 3 akari, high → 4 bad, very_high → 5 bad
+//   time: Quick ≤30 min → 2 good, Moderate 30-90 min → 3 akari, Long >90 min → 4 bad
+const DIFFICULTY_MAP = {
+  easy:   { fill: 2, color: "good"  },
+  low:    { fill: 2, color: "good"  },  // LLM occasionally substitutes "low"/"high" for difficulty
+  medium: { fill: 3, color: "akari" },
+  hard:   { fill: 4, color: "bad"   },
+  high:   { fill: 4, color: "bad"   },
+};
+const COST_MAP = {
+  free:      { fill: 1, color: "good"  },
+  low:       { fill: 2, color: "good"  },
+  medium:    { fill: 3, color: "akari" },
+  high:      { fill: 4, color: "bad"   },
+  very_high: { fill: 5, color: "bad"   },
+};
+function timeBucket(minutes) {
+  const m = Number(minutes) || 0;
+  if (m <= 0) return null;
+  if (m < 30) return { label: "Quick",    fill: 2, color: "good"  };
+  if (m <= 90) return { label: "Moderate", fill: 3, color: "akari" };
+  return                  { label: "Long",     fill: 4, color: "bad"   };
+}
+
+function Bars({ fill, color }) {
+  return (
+    <span className="bars" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, i) => (
+        <span
+          key={i}
+          className={"bar-seg" + (i < fill ? " fill-" + color : "")}
+        ></span>
+      ))}
+    </span>
+  );
+}
+
+function MetaCol({ label, value, bars }) {
+  return (
+    <div className="meta-col">
+      <div className="meta-label">{label}</div>
+      <div className="meta-value">
+        {bars && <Bars fill={bars.fill} color={bars.color} />}
+        <span>{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function Solution({ s, idx }) {
+  const [open, setOpen] = useState(false);
+  const diffKey = (s.difficulty || "").toLowerCase();
+  const costKey = (s.cost || "").toLowerCase();
+  const diffBars = DIFFICULTY_MAP[diffKey];
+  const costBars = COST_MAP[costKey];
+  const timeBars = timeBucket(s.estimated_time_minutes);
+
+  function cap(x) {
+    if (!x) return "—";
+    return x.charAt(0).toUpperCase() + x.slice(1).replace(/_/g, " ");
+  }
+
+  return (
+    <div className="solution">
+      <div
+        className="solution-head"
+        onClick={() => setOpen(!open)}
+        role="button"
+        aria-expanded={open}
+      >
+        <div className="solution-rank">{s.rank || idx + 1}</div>
+        <div className="solution-action">{s.action}</div>
+        <span className={"caret" + (open ? " open" : "")}>›</span>
+      </div>
+      <div className="solution-meta">
+        <MetaCol label="Difficulty" value={cap(diffKey)} bars={diffBars} />
+        <MetaCol label="Cost"       value={cap(costKey)} bars={costBars} />
+        <MetaCol label="Time"       value={timeBars ? timeBars.label : "—"} bars={timeBars} />
+      </div>
+      {open && (
+        <div className="solution-body">
+          <div className="body-label">Reasoning</div>
+          <div className="body-value">{s.reasoning || "—"}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Engineer-input gaps are wrapped by the backend in ⟨...⟩. Split a field value
+// into plain spans + highlighted "needs your input" spans.
+function renderEscValue(v) {
+  if (!v) return <span className="v empty">—</span>;
+  const parts = String(v).split(/(⟨[^⟩]*⟩)/g).filter((p) => p !== "");
+  return (
+    <span className="v">
+      {parts.map((p, i) =>
+        p.startsWith("⟨") && p.endsWith("⟩")
+          ? <span className="needs-input" key={i}>{p.slice(1, -1)}</span>
+          : <span key={i}>{p}</span>
+      )}
+    </span>
+  );
+}
+
+const CD_EMPTY = {
+  ld_calibration: "", lddr: "", oe_pct: "", sensor_pct: "", lsm_by: "",
+  actual_brightness_pct: "", observed_color: "", warmup_minutes: "", visibly_dirty: false,
+  measured_lumens: "", spec_lumens: "", flicker_normal_clears: "", flicker_rasters: "",
+  lm_h: "", lm_w: "", lm_pts: ["", "", "", "", "", "", "", "", ""],
+};
+function lumensFromPoints(pts, h, w) {
+  const vals = (pts || []).map(x => Number(x)).filter(x => !isNaN(x) && String(x) !== "");
+  const H = Number(h), W = Number(w);
+  if (vals.length < 9 || !(H > 0) || !(W > 0)) return null;
+  return vals.slice(0, 9).reduce((a, b) => a + b, 0) / 9 * (H / 100) * (W / 100);
+}
+function cdHasValues(v) {
+  if (!v) return false;
+  return ["oe_pct", "sensor_pct", "lsm_by", "actual_brightness_pct"].some(k => String(v[k] ?? "").trim() !== "")
+    || !!v.ld_calibration || !!v.lddr || !!v.flicker_normal_clears || !!v.flicker_rasters
+    || (String(v.measured_lumens ?? "").trim() !== "" && String(v.spec_lumens ?? "").trim() !== "");
+}
+function cdPayload(v) {
+  if (!cdHasValues(v)) return null;
+  const num = x => (String(x ?? "").trim() === "" ? null : Number(x));
+  return {
+    ld_calibration: v.ld_calibration || "",
+    lddr: v.lddr || "",
+    oe_pct: num(v.oe_pct),
+    sensor_pct: num(v.sensor_pct),
+    lsm_by: num(v.lsm_by),
+    actual_brightness_pct: num(v.actual_brightness_pct),
+    observed_color: v.observed_color || "",
+    warmup_minutes: num(v.warmup_minutes),
+    visibly_dirty: !!v.visibly_dirty,
+    measured_lumens: num(v.measured_lumens),
+    spec_lumens: num(v.spec_lumens),
+    flicker_normal_clears: v.flicker_normal_clears || "",
+    flicker_rasters: v.flicker_rasters || "",
+  };
+}
+function focusCdPanel() {
+  const el = document.getElementById("cd-panel");
+  if (!el) return;
+  el.open = true;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.remove("ips-upload-flash");
+  void el.offsetWidth;
+  el.classList.add("ips-upload-flash");
+  const first = el.querySelector("select, input");
+  if (first) setTimeout(() => first.focus(), 350);
+}
+
+// Condition Diagnosis values (IPS Tool 2.4.2). Screen-only in the tool, so
+// the engineer types them in. Optional; when filled they are sent as
+// cd_values and the verdict comes back as cd_analysis.
+function CdValuesPanel({ values, onChange, helpUrl }) {
+  const set = (k, val) => onChange({ ...values, [k]: val });
+  const filled = cdHasValues(values);
+  return (
+    <details className="cd-panel form-group" id="cd-panel">
+      <summary>
+        <span>🧪</span>
+        <span>Condition Diagnosis values (optional, laser models)</span>
+        {filled && <span className="cd-set">set</span>}
+        <span className="cd-chev">▶</span>
+      </summary>
+      <div className="cd-body">
+        <div className="cd-hint">
+          Copy the six items from the IPS Tool 2.4.2 Condition Diagnosis screen after at least 20 minutes of warm-up.
+          {helpUrl && <React.Fragment> <a href={helpUrl} target="_blank" rel="noopener noreferrer">How to run and read it</a>.</React.Fragment>}
+        </div>
+        <div className="cd-grid">
+          <label>LD calibration
+            <select value={values.ld_calibration} onChange={e => set("ld_calibration", e.target.value)}>
+              <option value="">—</option><option value="OK">OK</option><option value="Not Yet">Not Yet</option>
+            </select>
+          </label>
+          <label>LDDR
+            <select value={values.lddr} onChange={e => set("lddr", e.target.value)}>
+              <option value="">—</option><option value="OK">OK</option><option value="NG">NG</option>
+            </select>
+          </label>
+          <label>OE (or OE&amp;LSM) %
+            <input type="number" min="0" max="100" step="1" placeholder="e.g. 98" value={values.oe_pct} onChange={e => set("oe_pct", e.target.value)} />
+          </label>
+          <label>Sensor %
+            <input type="number" min="0" max="100" step="1" placeholder="e.g. 85" value={values.sensor_pct} onChange={e => set("sensor_pct", e.target.value)} />
+          </label>
+          <label>LSM B/Y (0 to 200)
+            <input type="number" min="0" max="200" step="1" placeholder="100 = balanced" value={values.lsm_by} onChange={e => set("lsm_by", e.target.value)} />
+          </label>
+          <label>Actual brightness % of spec (9-point, optional)
+            <input type="number" min="0" max="120" step="1" placeholder="e.g. 50" value={values.actual_brightness_pct} onChange={e => set("actual_brightness_pct", e.target.value)} />
+          </label>
+          <label>Image looks
+            <select value={values.observed_color} onChange={e => set("observed_color", e.target.value)}>
+              <option value="">—</option><option value="neutral">Neutral</option><option value="yellowish">Yellowish</option>
+              <option value="bluish">Bluish</option><option value="other">Other cast</option>
+            </select>
+          </label>
+          <label>Warm-up before measuring (min)
+            <input type="number" min="0" max="240" step="1" placeholder="20" value={values.warmup_minutes} onChange={e => set("warmup_minutes", e.target.value)} />
+          </label>
+          <label className="cd-check cd-wide">
+            <input type="checkbox" checked={!!values.visibly_dirty} onChange={e => set("visibly_dirty", e.target.checked)} />
+            Optical path visibly dirty (lens area, POP, light guide)
+          </label>
+        </div>
+
+        <details className="cd-sub-panel">
+          <summary>9-point brightness calculator (lux to lumens)</summary>
+          <div className="cd-hint">
+            100% white, colour mode Dynamic, matt screen 60 to 80 inch, after warm-up. Measure lux at the nine points (E1 to E9), enter the projected area. Lumens = mean lux × area.
+          </div>
+          <div className="cd-grid">
+            <label>Image height (cm)
+              <input type="number" min="1" step="0.1" value={values.lm_h} onChange={e => set("lm_h", e.target.value)} />
+            </label>
+            <label>Image width (cm)
+              <input type="number" min="1" step="0.1" value={values.lm_w} onChange={e => set("lm_w", e.target.value)} />
+            </label>
+            <div className="cd-wide cd-pts">
+              {values.lm_pts.map((v, i) => (
+                <label key={i}>E{i + 1} (lx)
+                  <input type="number" min="0" step="1" value={v} onChange={e => {
+                    const pts = values.lm_pts.slice(); pts[i] = e.target.value;
+                    const lm = lumensFromPoints(pts, values.lm_h, values.lm_w);
+                    onChange({ ...values, lm_pts: pts, measured_lumens: lm == null ? values.measured_lumens : Math.round(lm) });
+                  }} />
+                </label>
+              ))}
+            </div>
+            <label>Measured lumens (auto or typed)
+              <input type="number" min="0" step="1" value={values.measured_lumens} onChange={e => set("measured_lumens", e.target.value)} />
+            </label>
+            <label>Spec brightness of this model (lm)
+              <input type="number" min="0" step="1" placeholder="from the catalogue" value={values.spec_lumens} onChange={e => set("spec_lumens", e.target.value)} />
+            </label>
+            {(() => {
+              const m = Number(values.measured_lumens), sp = Number(values.spec_lumens);
+              if (!(m > 0) || !(sp > 0)) return null;
+              const pctv = Math.round(m / sp * 1000) / 10;
+              return (
+                <div className="cd-wide cd-calc">
+                  {m} lm of {sp} lm = <strong>{pctv}%</strong> of spec
+                  <button type="button" className="cd-clear" style={{ marginLeft: 10 }}
+                          onClick={() => set("actual_brightness_pct", String(pctv))}>use as actual brightness</button>
+                </div>
+              );
+            })()}
+          </div>
+        </details>
+
+        <details className="cd-sub-panel">
+          <summary>Flicker (two questions, not judged by the values)</summary>
+          <div className="cd-grid">
+            <label>Brightness mode set to Normal: does the flicker stop?
+              <select value={values.flicker_normal_clears} onChange={e => set("flicker_normal_clears", e.target.value)}>
+                <option value="">—</option><option value="yes">Yes, it stops</option><option value="no">No, still flickers</option>
+              </select>
+            </label>
+            <label>Single-colour rasters (R, G, B one at a time): which flicker?
+              <select value={values.flicker_rasters} onChange={e => set("flicker_rasters", e.target.value)}>
+                <option value="">—</option>
+                <option value="one">Only one colour</option>
+                <option value="rg">Red and green together, blue clean</option>
+                <option value="all">All colours or another combination</option>
+                <option value="none">None of the rasters flicker</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <div className="cd-actions">
+          {filled && <button type="button" className="cd-clear" onClick={() => onChange({ ...CD_EMPTY })}>Clear values</button>}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function CdAnalysis({ data }) {
+  const verdict = (data.verdict || "inconclusive").toLowerCase();
+  const pillCls = data.reference_only ? "reference" : verdict;
+  const pillTxt = data.reference_only ? "reference only" : verdict.replace(/_/g, " ");
+  const v = data.values || {};
+  const echo = [];
+  if (v.ld_calibration) echo.push("LD cal " + v.ld_calibration);
+  if (v.lddr) echo.push("LDDR " + v.lddr);
+  if (v.oe_pct != null) echo.push((v.oe_label || "OE") + " " + v.oe_pct + "%");
+  if (v.sensor_pct != null) echo.push("Sensor " + v.sensor_pct + "%");
+  if (v.lsm_by != null) echo.push("B/Y " + v.lsm_by);
+  if (v.actual_brightness_pct != null) echo.push("actual " + v.actual_brightness_pct + "%");
+  if (v.observed_color && v.observed_color !== "other") echo.push("image " + v.observed_color);
+  if (v.measured_lumens != null && v.spec_lumens) echo.push(v.measured_lumens + " lm of " + v.spec_lumens + " lm spec");
+  if (v.flicker) echo.push("flicker flow: " + String(v.flicker).replace(/_/g, " "));
+  if (v.warmup_minutes != null) echo.push("warm-up " + v.warmup_minutes + " min");
+  return (
+    <div className="card">
+      <div className="card-title">
+        <h2>🧪 Condition Diagnosis</h2>
+        <span className={"sev-pill " + pillCls}>{pillTxt}</span>
+      </div>
+      <div className="cd-verdict">{data.headline}</div>
+      {Array.isArray(data.findings) && data.findings.length > 0 && (
+        <React.Fragment>
+          <div className="cd-sub">What the values say</div>
+          <ul className="cd-list">{data.findings.map((f, i) => <li key={i}>{f}</li>)}</ul>
+        </React.Fragment>
+      )}
+      {Array.isArray(data.remedy) && data.remedy.length > 0 && (
+        <React.Fragment>
+          <div className="cd-sub">Order of work, cheapest first</div>
+          <ol className="cd-list">{data.remedy.map((f, i) => <li key={i}>{f}</li>)}</ol>
+        </React.Fragment>
+      )}
+      {Array.isArray(data.caveats) && data.caveats.length > 0 && (
+        <React.Fragment>
+          <div className="cd-sub">Caveats</div>
+          <ul className="cd-list">{data.caveats.map((f, i) => <li key={i} className="cd-caveat">{f}</li>)}</ul>
+        </React.Fragment>
+      )}
+      {echo.length > 0 && <div className="cd-values">Entered: {echo.join(" · ")}</div>}
+      {data.help_url && (
+        <a className="cd-link" href={data.help_url} target="_blank" rel="noopener noreferrer">How to run and read Condition Diagnosis</a>
+      )}
+    </div>
+  );
+}
+
+function Escalation({ esc }) {
+  const [copied, setCopied] = useState(false);
+  const rows = [
+    ["Summary", esc.summary],
+    ["Model", esc.model],
+    ["Serial", esc.serial],
+    ["Firmware", esc.firmware_version],
+    ["Problem description", esc.symptoms],
+    ["Error evidence", esc.error_evidence],
+    ["References checked", esc.references_checked],
+    ["Tried steps", esc.tried_steps],
+    ["Environment", esc.environment],
+    ["Connection", esc.connection_type],
+    ["Reproduction", esc.reproduction],
+    ["Diagnostic logs", esc.diagnostic_logs],
+    ["Impact", esc.impact],
+    ["Suspected cause", esc.suspected_cause],
+    ["Recommended next", esc.recommended_next],
+  ];
+  const hasGaps = rows.some(([, v]) => typeof v === "string" && v.includes("⟨"));
+  // Copy: convert ⟨x⟩ → [x] so gaps paste into the ticket as clear fill-in blanks.
+  const asText = useMemo(
+    () => rows.filter(([, v]) => v).map(([k, v]) =>
+      k + ": " + String(v).replace(/⟨/g, "[").replace(/⟩/g, "]")).join("\n"),
+    [esc]
+  );
+  function copy() {
+    navigator.clipboard.writeText(asText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+  return (
+    <div className="escalation">
+      <div className="escalation-head">
+        <h3>Escalation draft</h3>
+        <button className={"btn-copy" + (copied ? " copied" : "")} onClick={copy}>
+          {copied ? "✓ Copied" : "Copy"}
+        </button>
+      </div>
+      {hasGaps && (
+        <div className="escalation-hint">
+          <span className="needs-input-dot" /> Highlighted items need your input before sending.
+        </div>
+      )}
+      <div className="escalation-body">
+        {rows.map(([k, v]) => (
+          <div className="escalation-row" key={k}>
+            <div className="k">{k}</div>
+            {renderEscValue(v)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FeedbackInline({ result, problemText, depthTier }) {
+  const diagnosisId = result?.metadata?.diagnosis_id;
+  const [worked, setWorked] = useState(null);
+  const [whatFixed, setWhatFixed] = useState("");
+  const [notes, setNotes] = useState("");
+  const [cdPart, setCdPart] = useState("");
+  const hadCd = !!(result && result.cd_analysis);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [err, setErr] = useState(null);
+
+  // Stash diagnosis context in localStorage so the persistent link works
+  // later. Strict opsec: server never sees this until the user submits.
+  useEffect(() => {
+    if (!diagnosisId) return;
+    try {
+      const payload = {
+        problem_text: problemText,
+        diagnosis_response: result,
+        depth_tier: depthTier,
+        wiki_pages_used: result?.metadata?.wiki_pages_used || [],
+        diagnosis_ts: new Date().toISOString(),
+      };
+      localStorage.setItem("akari_diagnosis_" + diagnosisId, JSON.stringify(payload));
+    } catch (e) {}
+  }, [diagnosisId]);
+
+  if (!diagnosisId) return null;
+
+  async function submit() {
+    if (worked === null) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      const stored = JSON.parse(localStorage.getItem("akari_diagnosis_" + diagnosisId) || "{}");
+      const r = await fetch("/api/feedback/" + diagnosisId, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          worked,
+          what_fixed_it: whatFixed.trim() || null,
+          notes: notes.trim() || null,
+          cd_part_replaced: hadCd ? (cdPart || null) : null,
+          diagnosis_response: stored.diagnosis_response || result,
+          problem_text: stored.problem_text || problemText,
+          depth_tier: stored.depth_tier || depthTier,
+          wiki_pages_used: stored.wiki_pages_used || (result?.metadata?.wiki_pages_used || []),
+          diagnosis_ts: stored.diagnosis_ts || new Date().toISOString(),
+        }),
+      });
+      if (!r.ok) {
+        const body = await r.text().catch(() => "");
+        throw new Error(body || ("HTTP " + r.status));
+      }
+      setSubmitted(true);
+    } catch (e) {
+      setErr("We could not save your feedback. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    const link = window.location.origin + "/feedback/" + diagnosisId;
+    return (
+      <div className="feedback-confirm">
+        <div className="check">✓ Thank you. Your feedback has been saved.</div>
+        <div className="link">
+          You can return to update or delete it at:<br />
+          <a href={link}>{link}</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="feedback">
+      <h3>Was this diagnosis helpful?</h3>
+      <div className="feedback-notice">
+        Submitting feedback will save your problem description and the diagnosis for service improvement. You can delete it later via this page.
+      </div>
+      <div className="feedback-question">Did this diagnosis resolve the issue?</div>
+      <div className="feedback-buttons">
+        <button
+          type="button"
+          className={"fb-btn" + (worked === true ? " active worked" : "")}
+          onClick={() => setWorked(true)}
+        >✓ Worked</button>
+        <button
+          type="button"
+          className={"fb-btn" + (worked === false ? " active didnt" : "")}
+          onClick={() => setWorked(false)}
+        >✗ Didn't work</button>
+      </div>
+      {worked !== null && (
+        <div className="fb-fields">
+          {hadCd && (
+            <div className="form-group">
+              <label className="field-label">Condition Diagnosis: which part was actually replaced?</label>
+              <select className="fb-select" value={cdPart} onChange={e => setCdPart(e.target.value)}>
+                <option value="">— not decided yet —</option>
+                <option value="none">No part (calibration / cleaning / no fault)</option>
+                <option value="lsm">LSM (light source module)</option>
+                <option value="oe">Optical engine</option>
+                <option value="pop">POP only</option>
+                <option value="lddr">LDDR board</option>
+                <option value="lmdr">LMDR board</option>
+                <option value="main_board">Main board</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          )}
+          <div className="form-group">
+            <label className="field-label">What actually fixed it? (optional)</label>
+            <textarea
+              value={whatFixed}
+              onChange={e => setWhatFixed(e.target.value)}
+              placeholder="e.g. Replaced the main board after re-seating the lamp connectors"
+            />
+          </div>
+          <div className="form-group">
+            <label className="field-label">Additional notes (optional)</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+            />
+          </div>
+          <div className="fb-actions">
+            <button className="btn-primary" onClick={submit} disabled={submitting}>
+              {submitting ? "Saving..." : "Submit feedback"}
+            </button>
+          </div>
+        </div>
+      )}
+      {err && <div className="error-box">{err}</div>}
+    </div>
+  );
+}
+
+const DISCLAIMER_TEXT = "This diagnosis is generated by AKARI based on documented failure patterns and technical references. Recommendations are for technician guidance only. Actual repair times, costs, and parts availability vary by region, model revision, and individual case. Always verify with current service documentation and authorized parts catalogs before performing repairs. AKARI is a decision-support tool, not a substitute for qualified technician judgment.";
+
+function Disclaimer() {
+  return (
+    <div className="disclaimer" role="note" aria-label="Disclaimer">
+      <div className="d-title">Disclaimer</div>
+      <p className="d-body">{DISCLAIMER_TEXT}</p>
+    </div>
+  );
+}
+
+// Phase pipeline driving the loading-state step list. Each entry is rendered
+// as pending → active (when matched by current_step) → done (when a later step
+// becomes active or the diagnosis finishes).
+const PHASE_ORDER = ["queued", "detecting", "consulting", "selecting", "analyzing", "drafting"];
+
+function phaseLabel(step, progress) {
+  switch (step) {
+    case "detecting": {
+      const m = progress?.detected_model;
+      if (m === "auto") return "Detecting model (auto-mode)";
+      if (m) return "Detected model: " + m;
+      return "Detecting model";
+    }
+    case "consulting": {
+      const n = progress?.pages_count;
+      return n ? "Cross-referenced " + n + " known failure patterns" : "Cross-referencing known failures";
+    }
+    case "selecting":
+      return "Selecting engine";
+    case "analyzing":
+      return "Identifying failure patterns";
+    case "drafting":
+      return "Drafting recommendations";
+    default:
+      return step;
+  }
+}
+
+function LoadingState({ elapsed, currentStep, progress }) {
+  const visibleSteps = PHASE_ORDER.filter(s => s !== "queued");
+  // Active step + done before it. If we're past "drafting" (i.e. done), mark all done.
+  const currentIdx = currentStep === "queued"
+    ? -1
+    : visibleSteps.indexOf(currentStep);
+  return (
+    <div className="loading-state">
+      <div className="head">
+        <span className="head-dot" aria-hidden="true"></span>
+        <span className="head-label">Analyzing…</span>
+        <span className="head-elapsed">{elapsed}s</span>
+      </div>
+      <div className="step-list" role="status" aria-live="polite">
+        {visibleSteps.map((step, i) => {
+          let state = "pending";
+          if (currentIdx === -1) {
+            state = "pending";
+          } else if (i < currentIdx) {
+            state = "done";
+          } else if (i === currentIdx) {
+            state = "active";
+          }
+          const mark = state === "done" ? "✓" : state === "active" ? "◐" : "○";
+          return (
+            <div key={step} className={"step " + state}>
+              <span className="step-mark" aria-hidden="true">{mark}</span>
+              <span className="step-text">{phaseLabel(step, progress)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Focus the IPS upload control from the ask-for-log callout: scroll it into
+// view, flash it, and open the file picker so the engineer can attach in place.
+function focusIpsUpload() {
+  const el = document.getElementById("ips-upload");
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.remove("ips-upload-flash");
+  void el.offsetWidth; // restart the animation
+  el.classList.add("ips-upload-flash");
+  const input = el.querySelector('input[type="file"]');
+  if (input) setTimeout(() => input.click(), 350);
+}
+
+function AskForLog({ info }) {
+  const msg = (info && info.message) ||
+    "Attach the IPS Tool log (.tsv) for a more precise diagnosis.";
+  return (
+    <div className="ask-log">
+      <span className="ask-ico">📎</span>
+      <div className="ask-body">
+        <div className="ask-msg">{msg}</div>
+        <button type="button" className="ask-btn" onClick={focusIpsUpload}>
+          Attach IPS log
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Condition Diagnosis callout: the gate decided this image-quality complaint
+// on a supported laser model needs the IPS Tool measurement before the
+// LSM-vs-optical-engine call can be made. Phase A: ask + link. Phase B adds
+// the value inputs.
+function AskForConditionDiagnosis({ info }) {
+  const msg = (info && info.message) ||
+    "Run Condition Diagnosis in the IPS Tool and enter the values for a precise light source vs optical engine call.";
+  const url = info && info.help_url;
+  return (
+    <div className="ask-log ask-cd">
+      <span className="ask-ico">🧪</span>
+      <div className="ask-body">
+        <div className="ask-msg">{msg}</div>
+        <button type="button" className="ask-btn" onClick={focusCdPanel} style={{ marginRight: 8 }}>
+          Enter the values
+        </button>
+        {url && (
+          <a className="ask-btn" href={url} target="_blank" rel="noopener noreferrer">
+            How to run and read Condition Diagnosis
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function IpsAnalysis({ data }) {
+  const sev = (data.severity || "info").toLowerCase();
+  const findings = Array.isArray(data.findings) ? data.findings : [];
+  return (
+    <div className="card">
+      <div className="card-title">
+        <h2>🔬 IPS log analysis</h2>
+        <span className={"sev-pill " + sev}>{sev}</span>
+      </div>
+      {data.summary && <div className="ips-summary">{data.summary}</div>}
+      {findings.length > 0 && (
+        <ul className="ips-findings">
+          {findings.map((f, i) => <li key={i}>{f}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Results({ result, problemText, depthTier }) {
+  const { diagnosis = {}, solutions = [], escalation_draft,
+          ips_analysis, info_request, cd_analysis } = result || {};
+  const conf = confidenceTier(diagnosis.confidence);
+  const hasReasoning =
+    diagnosis.reasoning && diagnosis.reasoning !== diagnosis.primary_cause;
+  const askLog = info_request && info_request.want === "ips_log";
+  const askCd = info_request && info_request.want === "condition_diagnosis";
+  return (
+    <React.Fragment>
+      {askLog && <AskForLog info={info_request} />}
+      {askCd && <AskForConditionDiagnosis info={info_request} />}
+
+      <div className="card">
+        <div className="card-title">
+          <h2>Diagnosis</h2>
+          <span className={"conf-pill " + conf.cls}>Confidence: {conf.label}</span>
+        </div>
+        <div className="diag-body">{diagnosis.primary_cause || "—"}</div>
+        {hasReasoning && <div className="diag-reasoning">{diagnosis.reasoning}</div>}
+      </div>
+
+      {cd_analysis && <CdAnalysis data={cd_analysis} />}
+      {ips_analysis && <IpsAnalysis data={ips_analysis} />}
+
+      {solutions.length > 0 && (
+        <div className="solutions-section">
+          <div className="solutions-header">Recommended actions ({solutions.length})</div>
+          {solutions.map((s, i) => <Solution key={i} s={s} idx={i} />)}
+        </div>
+      )}
+
+      {escalation_draft && <Escalation esc={escalation_draft} />}
+
+      <Disclaimer />
+
+      <FeedbackInline result={result} problemText={problemText} depthTier={depthTier} />
+    </React.Fragment>
+  );
+}
+
+// Pick initial theme: user choice in localStorage wins; otherwise honor
+// prefers-color-scheme. Epson is never auto-picked — user must opt in.
+function initialTheme() {
+  try {
+    const stored = localStorage.getItem("akari-theme");
+    if (stored === "akari-light" || stored === "akari-dark" || stored === "epson") {
+      return stored;
+    }
+  } catch (e) {}
+  if (typeof window !== "undefined" && window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return "akari-dark";
+  }
+  return "akari-light";
+}
+
+function App() {
+  const [problem, setProblem] = useState("");
+  const [depth, setDepth] = useState(DEPTH_DEFAULT);
+  const [model, setModel] = useState("");
+  const [ipsLog, setIpsLog] = useState("");
+  const [ipsLogName, setIpsLogName] = useState("");
+  const [image, setImage] = useState("");
+  const [imageName, setImageName] = useState("");
+  const [cdValues, setCdValues] = useState({ ...CD_EMPTY });
+  const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [result, setResult] = useState(null);
+  const [err, setErr] = useState(null);
+  const [currentStep, setCurrentStep] = useState("queued");
+  const [progress, setProgress] = useState({});
+  const [health, setHealth] = useState(null);
+  const [theme, setThemeState] = useState(initialTheme);
+
+  // Apply theme to <body>, persist, update favicon. Wraps the swap in a
+  // 200ms "theme-transitioning" class so themed surfaces cross-fade instead
+  // of snapping. Skips the fade on first mount (no previous theme to fade from).
+  const firstThemeApplyRef = React.useRef(true);
+  useEffect(() => {
+    const body = document.body;
+    // Strip any previous theme class.
+    body.classList.remove("theme-akari-light", "theme-akari-dark", "theme-epson");
+    body.classList.add("theme-" + theme);
+
+    // Favicon hot-swap.
+    const fav = document.getElementById("favicon");
+    if (fav && FAVICON_BY_THEME[theme]) fav.href = FAVICON_BY_THEME[theme];
+
+    if (!firstThemeApplyRef.current) {
+      body.classList.add("theme-transitioning");
+      const t = setTimeout(() => body.classList.remove("theme-transitioning"), 250);
+      try { localStorage.setItem("akari-theme", theme); } catch (e) {}
+      return () => clearTimeout(t);
+    }
+    firstThemeApplyRef.current = false;
+    try { localStorage.setItem("akari-theme", theme); } catch (e) {}
+  }, [theme]);
+
+  function setTheme(next) { setThemeState(next); }
+
+  useEffect(() => {
+    fetch("/health")
+      .then(r => r.json())
+      .then(setHealth)
+      .catch(() => setHealth({ status: "error" }));
+  }, []);
+
+  function onFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    setIpsLogName(f.name);
+    const reader = new FileReader();
+    reader.onload = ev => setIpsLog(ev.target.result);
+    reader.readAsText(f);
+  }
+
+  function onImage(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    setImageName(f.name);
+    const reader = new FileReader();
+    reader.onload = ev => setImage(ev.target.result);  // data: URL; backend strips the prefix
+    reader.readAsDataURL(f);
+  }
+
+  async function diagnose() {
+    if (!problem.trim()) return;
+    setLoading(true);
+    setErr(null);
+    setResult(null);
+    setElapsed(0);
+    setCurrentStep("queued");
+    setProgress({});
+    const preset = DEPTH_PRESETS[depth];
+    const startedAt = Date.now();
+    const tick = setInterval(() => {
+      setElapsed(Math.round((Date.now() - startedAt) / 1000));
+    }, 500);
+    try {
+      const post = await fetch("/diagnose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem,
+          model: model || null,
+          ips_log: ipsLog || null,
+          image: image || null,
+          cd_values: cdPayload(cdValues),
+          depth_tier: depth.toLowerCase(),
+          ...preset.payload,
+        }),
+      });
+      if (!post.ok) throw new Error("Failed to submit diagnosis");
+      const ack = await post.json();
+      if (!ack.diagnosis_id) throw new Error("Server did not return a diagnosis id");
+      const deadline = Date.now() + 10 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 2000));
+        const poll = await fetch("/diagnose/" + ack.diagnosis_id);
+        if (poll.status === 202) {
+          // Pending — pick up the phase + progress so the step list animates.
+          try {
+            const body = await poll.json();
+            if (body.current_step) setCurrentStep(body.current_step);
+            if (body.progress) setProgress(body.progress);
+          } catch (_) {}
+          continue;
+        }
+        if (!poll.ok) {
+          let detail = "Diagnosis failed";
+          try { const body = await poll.json(); if (body.detail) detail = body.detail; } catch (_) {}
+          throw new Error(detail);
+        }
+        const data = await poll.json();
+        setResult(data);
+        return;
+      }
+      throw new Error("Diagnosis timed out after 10 minutes");
+    } catch (e) {
+      setErr(e && e.message ? e.message : "Unable to complete analysis. Please try again.");
+    } finally {
+      clearInterval(tick);
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="app">
+      <Header health={health} theme={theme} setTheme={setTheme} />
+      <div className="main">
+        <aside className="panel-left">
+          <h2 className="section-title">Problem</h2>
+
+          <ModelSelector value={model} onChange={setModel} />
+
+          <div className="form-group">
+            <label className="field-label" htmlFor="problem">Describe the symptom</label>
+            <textarea
+              id="problem"
+              value={problem}
+              onChange={e => setProblem(e.target.value)}
+              placeholder="e.g. EB-X49 showing lamp error after 1000 hours, replaced lamp but error persists…"
+            />
+          </div>
+
+          <DepthSelector value={depth} onChange={setDepth} />
+          <FileUpload name={ipsLogName} onChange={onFile} />
+          <PhotoUpload name={imageName} onChange={onImage} />
+          <CdValuesPanel values={cdValues} onChange={setCdValues}
+                         helpUrl={(result && result.info_request && result.info_request.help_url) || (result && result.cd_analysis && result.cd_analysis.help_url) || ""} />
+
+          <button
+            className="btn-primary"
+            onClick={diagnose}
+            disabled={loading || !problem.trim() || !model}
+          >
+            {loading ? "Analyzing…" : !model ? "Select a model first" : "Diagnose →"}
+          </button>
+
+          {err && <div className="error-box">{err}</div>}
+        </aside>
+
+        <main className="panel-right">
+          {loading && (
+            <LoadingState elapsed={elapsed} currentStep={currentStep} progress={progress} />
+          )}
+          {!loading && !result && !err && (
+            <div className="empty-state">
+              <div className="kanji" aria-hidden="true">明かり</div>
+              <p className="slogan">Bringing light to every case.</p>
+              <p className="lead">Describe a projector symptom on the left and press Diagnose.</p>
+            </div>
+          )}
+          {!loading && result && <Results result={result} problemText={problem} depthTier={depth.toLowerCase()} />}
+        </main>
+      </div>
+      <div className="footer">
+        <span>Epson Middle East · Internal Tool</span>
+        <span className="right">
+          <span className="footer-kanji" aria-hidden="true">明かり</span>
+          <span>v0.1</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>

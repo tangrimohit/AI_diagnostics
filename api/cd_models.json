@@ -1,0 +1,31 @@
+{
+ "_readme": "Condition Diagnosis applicable models (IPS Tool). FIX = fixed phosphor (reports OE&LSM). PHW = phosphor wheel (reports OE). Extend per deployment via scripts/build_cd_models.py.",
+ "restraining_floor_default": 90,
+ "models": [
+  {
+   "model": "EB-L260F",
+   "h_code": "HA69",
+   "light_source": "FIX"
+  },
+  {
+   "model": "CB-L260F",
+   "h_code": "HA69",
+   "light_source": "FIX"
+  },
+  {
+   "model": "EB-PU2220B",
+   "h_code": "HA66",
+   "light_source": "PHW"
+  },
+  {
+   "model": "EB-PU2216B",
+   "h_code": "HA67",
+   "light_source": "PHW"
+  },
+  {
+   "model": "EB-PU2213B",
+   "h_code": "HA68",
+   "light_source": "PHW"
+  }
+ ]
+}

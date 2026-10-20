@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 160" width="360" height="160" role="img" aria-label="AKARI — Bringing light to every case">
+  <style>
+    .dot   { fill: var(--logo-dot,   #D69D3F); }
+    .kanji { fill: var(--logo-ink,   #1A1A1A); font-family: "Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif; font-weight: 400; }
+    .mark  { fill: var(--logo-ink,   #1A1A1A); font-family: "Inter","Segoe UI","Helvetica Neue",sans-serif; font-weight: 200; letter-spacing: 5px; }
+    .tag   { fill: var(--logo-muted, #807468); font-family: "Inter","Segoe UI","Helvetica Neue",sans-serif; font-weight: 400; }
+  </style>
+  <!-- Left column: light point above 明かり -->
+  <circle class="dot" cx="60" cy="40" r="32" opacity="0.10" />
+  <circle class="dot" cx="60" cy="40" r="20" opacity="0.25" />
+  <circle class="dot" cx="60" cy="40" r="11" />
+  <text class="kanji" x="60" y="118" font-size="32" text-anchor="middle">明かり</text>
+  <!-- Right column: AKARI + tagline, vertically centered on the kanji band -->
+  <text class="mark" x="138" y="100" font-size="26">AKARI</text>
+  <text class="tag"  x="138" y="122" font-size="11">Bringing light to every case</text>
+</svg>

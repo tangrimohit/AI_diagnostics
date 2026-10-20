@@ -1,0 +1,10 @@
+** Define File : DEMO_SAMPLE
+** IPS Tool Version : 1.00
+VER=MAIN V0250
+"DEMO00000002"	"EB-PU2216B"
+"Projector Information"	"Power ON Counter"	"1530"
+"Projector Information"	"Operating Time"	"8260 h"
+"Laser Information"	"Laser ON Counter"	"1490"
+"Laser Information"	"Laser Operating Time"	"8200 h"
+"Error Counter"	"[YE]Laser Error"	"2"
+"Warning Counter"	"[YE]Laser Warning"	"4"

@@ -1,0 +1,2252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="robots" content="noindex,nofollow,noarchive" />
+<title>AKARI · Admin Monitor</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#FAF8F4" />
+<style>
+  :root {
+    --epson-deep-blue: #10218B;
+    --epson-blue: #003399;
+    --bg-canvas: #FFFFFF;
+    --bg-panel: #F4F5F7;
+    --bg-subtle: #FAFBFC;
+    --border-default: #D0D5DD;
+    --text-primary: #1A1A1A;
+    --text-secondary: #4A5568;
+    --text-muted: #6B7280;
+    --success: #0F9D58;
+    --warning: #F59E0B;
+    --error: #DC2626;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+    --shadow-card: 0 1px 3px rgba(16, 33, 139, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; background: var(--bg-panel); }
+  body { color: var(--text-primary); font-family: var(--font-sans); font-size: 13.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  header.bar {
+    background: var(--bg-canvas);
+    border-bottom: 1px solid var(--border-default);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .bar h1 { margin: 0; font-size: 20px; font-weight: 600; color: var(--epson-deep-blue); letter-spacing: 0.5px; }
+  .bar .sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+  .bar a { color: var(--epson-deep-blue); text-decoration: none; font-size: 12px; }
+  .bar a:hover { text-decoration: underline; }
+
+  .tabs {
+    background: var(--bg-canvas);
+    border-bottom: 1px solid var(--border-default);
+    padding: 0 28px;
+    display: flex;
+    gap: 4px;
+  }
+  .tab {
+    padding: 12px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--epson-deep-blue); }
+  .tab.active { color: var(--epson-deep-blue); border-bottom-color: var(--epson-deep-blue); }
+
+  main { padding: 24px 28px; max-width: 1440px; margin: 0 auto; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card { background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 8px; padding: 18px 20px; box-shadow: var(--shadow-card); }
+  .card h2 { margin: 0 0 12px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); font-weight: 600; }
+
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; }
+  .kv .k { color: var(--text-muted); font-size: 12px; }
+  .kv .v { color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; }
+  .kv .v.big { font-size: 22px; color: var(--epson-deep-blue); font-weight: 600; }
+
+  .row { display: flex; gap: 10px; margin-bottom: 6px; align-items: baseline; }
+  .row .label { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 80px; }
+  .row .value { color: var(--text-primary); font-family: var(--font-mono); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .badge.success { background: rgba(15, 157, 88, 0.12); color: var(--success); }
+  .badge.warn { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
+  .badge.error { background: rgba(220, 38, 38, 0.12); color: var(--error); }
+  .badge.muted { background: var(--bg-panel); color: var(--text-muted); }
+  .badge.info { background: rgba(16, 33, 139, 0.08); color: var(--epson-deep-blue); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border-default); }
+  th { background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr.row-link { cursor: pointer; }
+  tr.row-link:hover { background: var(--bg-subtle); }
+  td.mono, th.mono { font-family: var(--font-mono); font-size: 12px; }
+
+  .modal-back { position: fixed; inset: 0; background: rgba(15, 18, 26, 0.45); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 100; }
+  .modal { background: var(--bg-canvas); border-radius: 10px; max-width: 1100px; width: 100%; max-height: 90vh; overflow: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+  .modal-head { padding: 16px 22px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg-canvas); z-index: 1; }
+  .modal-head h2 { margin: 0; font-size: 15px; color: var(--epson-deep-blue); font-weight: 600; }
+  .modal-head .close { background: transparent; border: 1px solid var(--border-default); border-radius: 6px; padding: 4px 10px; color: var(--text-secondary); cursor: pointer; font-family: var(--font-sans); font-size: 13px; }
+  .modal-head .close:hover { color: var(--epson-deep-blue); border-color: var(--epson-deep-blue); }
+  .modal-body { padding: 20px 22px; }
+
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); font-weight: 600; margin: 18px 0 8px 0; }
+  .section-title:first-child { margin-top: 0; }
+
+  .page-card {
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    background: var(--bg-subtle);
+  }
+  .page-card .path { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); margin-bottom: 4px; }
+  .page-card .pmeta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); }
+  .page-card .pmeta span { display: inline-block; }
+  .pill { padding: 1px 7px; border-radius: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pill.original { background: rgba(16, 33, 139, 0.08); color: var(--epson-deep-blue); }
+  .pill.ingested { background: rgba(15, 157, 88, 0.10); color: var(--success); }
+  .pill.manual_edit { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
+  .pill.feedback_derived { background: rgba(220, 38, 38, 0.10); color: var(--error); }
+
+  pre.code { background: var(--bg-subtle); border: 1px solid var(--border-default); border-radius: 6px; padding: 10px 12px; font-family: var(--font-mono); font-size: 12px; overflow-x: auto; line-height: 1.5; white-space: pre-wrap; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .stat-grid .stat { background: var(--bg-subtle); border: 1px solid var(--border-default); border-radius: 6px; padding: 10px 14px; }
+  .stat .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .stat .num { font-size: 18px; font-family: var(--font-mono); color: var(--text-primary); margin-top: 2px; }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; padding: 12px 16px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 6px; }
+  /* Column-filter popover (Diagnoses table) */
+  .th-label { cursor: pointer; user-select: none; }
+  .th-label:hover { color: var(--epson-blue); }
+  .th-filter { margin-left: 4px; border: 1px solid var(--border-default); background: var(--bg-subtle); cursor: pointer; color: var(--text-secondary); font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 5px; vertical-align: middle; }
+  .th-filter:hover { background: var(--bg-panel); color: var(--text-primary); border-color: var(--text-muted); }
+  .th-filter.active { background: var(--epson-blue); border-color: var(--epson-blue); color: #fff; font-weight: 600; }
+  .cf-backdrop { position: fixed; inset: 0; z-index: 40; background: transparent; }
+  .cf-pop { position: fixed; z-index: 41; min-width: 210px; max-width: 290px; background: var(--bg-canvas); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 10px; box-shadow: 0 10px 30px rgba(16,33,139,0.18); padding: 8px; font-weight: 400; text-align: left; }
+  .cf-search { width: 100%; box-sizing: border-box; padding: 6px 9px; font-size: 12px; border: 1px solid var(--border-default); border-radius: 7px; background: var(--bg-subtle); color: inherit; margin-bottom: 6px; }
+  .cf-search:focus { outline: none; border-color: var(--epson-blue); }
+  .cf-actions { display: flex; gap: 6px; margin-bottom: 6px; }
+  .cf-actions button { flex: 1; font-size: 11px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-default); background: transparent; cursor: pointer; color: var(--text-secondary); }
+  .cf-actions button:hover { background: var(--bg-panel); color: var(--text-primary); }
+  .cf-list { max-height: 244px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+  .cf-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+  .cf-item:hover { background: var(--bg-subtle); }
+  .cf-item input { margin: 0; cursor: pointer; accent-color: var(--epson-blue); }
+  .cf-val { flex: 1; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  .cf-count { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .cf-empty { color: var(--text-muted); font-size: 12px; padding: 8px 6px; text-align: center; }
+  .toolbar select, .toolbar input { padding: 6px 10px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 4px; font-family: var(--font-sans); font-size: 12px; color: var(--text-primary); }
+  .toolbar .right { margin-left: auto; }
+  .toolbar button { padding: 6px 12px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 4px; cursor: pointer; font-family: var(--font-sans); font-size: 12px; color: var(--text-secondary); }
+  .toolbar button:hover { color: var(--epson-deep-blue); border-color: var(--epson-deep-blue); }
+  .toolbar button:disabled { color: var(--text-muted); cursor: not-allowed; }
+
+  .btn-primary { background: var(--epson-deep-blue); color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-family: var(--font-sans); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-primary:hover { background: var(--epson-blue); }
+
+  .bar-row { display: grid; grid-template-columns: 110px 1fr 50px; gap: 10px; align-items: center; margin-bottom: 5px; font-size: 12px; }
+  .bar-row .bar-lbl { color: var(--text-secondary); text-transform: capitalize; }
+  .bar-row .bar-track { background: var(--bg-panel); height: 14px; border-radius: 4px; overflow: hidden; }
+  .bar-row .bar-fill { background: var(--epson-deep-blue); height: 100%; }
+  .bar-row .bar-fill.success { background: var(--success); }
+  .bar-row .bar-fill.warn { background: var(--warning); }
+  .bar-row .bar-fill.error { background: var(--error); }
+  .bar-row .bar-fill.muted { background: var(--text-muted); }
+  .bar-row .bar-num { text-align: right; font-family: var(--font-mono); color: var(--text-secondary); }
+
+  .loading { padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .empty { padding: 30px; text-align: center; color: var(--text-muted); font-style: italic; font-size: 13px; }
+
+  /* Wiki tab */
+  .wiki-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; min-height: 70vh; }
+  @media (max-width: 1000px) { .wiki-layout { grid-template-columns: 1fr; } }
+  .wiki-sidebar { background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 8px; padding: 12px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; max-height: 78vh; }
+  .wiki-search { display: flex; gap: 6px; margin-bottom: 8px; }
+  .wiki-search input { flex: 1; padding: 6px 10px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 4px; font-family: var(--font-sans); font-size: 12px; }
+  .wiki-search select { padding: 6px 8px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 4px; font-family: var(--font-sans); font-size: 11px; color: var(--text-secondary); }
+  .wiki-tree { overflow-y: auto; flex: 1; }
+  .tree-node { padding-left: 14px; }
+  .tree-folder { cursor: pointer; padding: 3px 0; color: var(--text-primary); font-size: 12.5px; display: flex; align-items: center; gap: 4px; user-select: none; }
+  .tree-folder:hover { color: var(--epson-deep-blue); }
+  .tree-folder .chev { display: inline-block; width: 12px; color: var(--text-muted); font-size: 10px; transition: transform 0.15s; }
+  .tree-folder .chev.open { transform: rotate(90deg); }
+  .tree-folder .fname { font-weight: 500; }
+  .tree-folder .count { color: var(--text-muted); font-size: 11px; }
+  .tree-file { padding: 2px 0 2px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .tree-file:hover { color: var(--epson-deep-blue); background: var(--bg-subtle); }
+  .tree-file.active { color: var(--epson-deep-blue); background: rgba(16, 33, 139, 0.08); border-radius: 3px; font-weight: 500; }
+  .tree-file .typetag { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg-panel); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .tree-file .typetag.entity { background: rgba(16, 33, 139, 0.10); color: var(--epson-deep-blue); }
+  .tree-file .typetag.concept { background: rgba(15, 157, 88, 0.10); color: var(--success); }
+  .tree-file .typetag.procedure { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
+  .tree-file .typetag.error_code { background: rgba(220, 38, 38, 0.10); color: var(--error); }
+  .tree-file .typetag.failure_mode { background: rgba(220, 38, 38, 0.08); color: var(--error); }
+
+  .wiki-content { background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 8px; padding: 20px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; min-height: 70vh; }
+  .wiki-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-default); flex-wrap: wrap; }
+  .wiki-toolbar .path { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); margin-right: auto; }
+  .wiki-toolbar button { padding: 6px 12px; background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 4px; cursor: pointer; font-family: var(--font-sans); font-size: 12px; color: var(--text-secondary); }
+  .wiki-toolbar button:hover:not(:disabled) { color: var(--epson-deep-blue); border-color: var(--epson-deep-blue); }
+  .wiki-toolbar button:disabled { color: var(--text-muted); cursor: not-allowed; }
+  .wiki-toolbar button.danger { color: var(--error); border-color: rgba(220, 38, 38, 0.3); }
+  .wiki-toolbar button.danger:hover:not(:disabled) { background: rgba(220, 38, 38, 0.06); border-color: var(--error); }
+  .wiki-toolbar button.primary { background: var(--epson-deep-blue); color: #fff; border-color: var(--epson-deep-blue); }
+  .wiki-toolbar button.primary:hover { background: var(--epson-blue); border-color: var(--epson-blue); }
+
+  .wiki-empty { color: var(--text-muted); padding: 60px 20px; text-align: center; font-size: 13px; }
+  .wiki-fm { background: var(--bg-subtle); border: 1px solid var(--border-default); border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; }
+  .wiki-fm .fm-row { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 3px 0; }
+  .wiki-fm .fm-k { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .wiki-fm .fm-v { color: var(--text-primary); font-family: var(--font-mono); word-break: break-word; }
+
+  .markdown-rendered { font-size: 13px; line-height: 1.6; color: var(--text-primary); overflow-y: auto; flex: 1; }
+  .markdown-rendered h1 { font-size: 22px; color: var(--epson-deep-blue); margin: 20px 0 12px 0; }
+  .markdown-rendered h2 { font-size: 17px; color: var(--epson-deep-blue); margin: 22px 0 10px 0; padding-bottom: 4px; border-bottom: 1px solid var(--border-default); }
+  .markdown-rendered h3 { font-size: 14px; color: var(--text-primary); margin: 18px 0 8px 0; font-weight: 600; }
+  .markdown-rendered h4 { font-size: 13px; color: var(--text-secondary); margin: 16px 0 6px 0; font-weight: 600; }
+  .markdown-rendered p { margin: 8px 0; }
+  .markdown-rendered ul, .markdown-rendered ol { padding-left: 22px; margin: 8px 0; }
+  .markdown-rendered li { margin: 3px 0; }
+  .markdown-rendered code { background: var(--bg-panel); padding: 1px 6px; border-radius: 3px; font-family: var(--font-mono); font-size: 12px; }
+  .markdown-rendered pre { background: var(--bg-panel); padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; }
+  .markdown-rendered pre code { background: transparent; padding: 0; }
+  .markdown-rendered table { width: auto; margin: 10px 0; border-collapse: collapse; }
+  .markdown-rendered table th, .markdown-rendered table td { border: 1px solid var(--border-default); padding: 6px 10px; font-size: 12px; }
+  .markdown-rendered table th { background: var(--bg-subtle); }
+  .markdown-rendered blockquote { border-left: 3px solid var(--border-default); padding-left: 12px; color: var(--text-secondary); margin: 8px 0; }
+  .markdown-rendered a { color: var(--epson-deep-blue); text-decoration: none; }
+  .markdown-rendered a:hover { text-decoration: underline; }
+  .markdown-rendered hr { border: none; border-top: 1px solid var(--border-default); margin: 18px 0; }
+
+  .editor-wrap { display: grid; grid-template-columns: 50px 1fr; flex: 1; border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; min-height: 50vh; }
+  .editor-gutter { background: var(--bg-subtle); color: var(--text-muted); padding: 10px 8px 10px 4px; text-align: right; font-family: var(--font-mono); font-size: 12px; line-height: 1.55; overflow: hidden; user-select: none; border-right: 1px solid var(--border-default); }
+  .editor-gutter div { line-height: 1.55; }
+  textarea.editor { width: 100%; height: 100%; padding: 10px 12px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; border: none; outline: none; resize: none; background: var(--bg-canvas); color: var(--text-primary); white-space: pre; overflow: auto; tab-size: 2; }
+
+  .side-panel { background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 6px; padding: 14px; margin-top: 14px; box-shadow: var(--shadow-card); }
+  .side-panel h3 { margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); }
+  .history-row { display: grid; grid-template-columns: 90px 80px 70px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-default); font-size: 12px; align-items: baseline; }
+  .history-row:last-child { border-bottom: none; }
+  .history-row .ts { font-family: var(--font-mono); color: var(--text-secondary); font-size: 11px; }
+  .history-row .commit { font-family: var(--font-mono); color: var(--epson-deep-blue); font-size: 11px; cursor: pointer; }
+  .history-row .commit:hover { text-decoration: underline; }
+  .history-row .summary { color: var(--text-primary); }
+  .citation-row { display: grid; grid-template-columns: 130px 1fr auto auto; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border-default); font-size: 12px; align-items: baseline; cursor: pointer; }
+  .citation-row:hover { background: var(--bg-subtle); }
+  .citation-row:last-child { border-bottom: none; }
+
+  .modal-back .modal.report { max-width: 900px; }
+  .report-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin: 16px 0 8px 0; }
+  .report-section h3:first-child { margin-top: 0; }
+  .report-section ul { padding-left: 20px; }
+  .report-section li { margin: 4px 0; font-size: 12.5px; }
+  .report-section li code { background: var(--bg-panel); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); font-size: 11.5px; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--text-primary); color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); animation: fadein 0.2s ease-out; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Ingest panel */
+  .ingest-panel { background: var(--bg-canvas); border: 1px solid var(--border-default); border-radius: 8px; padding: 14px 16px; box-shadow: var(--shadow-card); margin-bottom: 16px; }
+  .ingest-panel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin: 0 0 10px 0; font-weight: 600; }
+  .ingest-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-default); align-items: center; font-size: 12px; }
+  .ingest-row:last-child { border-bottom: none; }
+  .ingest-row .src { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-primary); }
+  .ingest-row .src .name { color: var(--text-primary); }
+  .ingest-row .src .meta { color: var(--text-muted); font-size: 11px; margin-top: 1px; }
+  .status-pill { font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+  .status-pill.processing { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
+  .status-pill.ready { background: rgba(15, 157, 88, 0.12); color: var(--success); }
+  .status-pill.failed { background: rgba(220, 38, 38, 0.12); color: var(--error); }
+  .status-pill.approved { background: rgba(16, 33, 139, 0.08); color: var(--epson-deep-blue); }
+  .status-pill.rejected { background: var(--bg-panel); color: var(--text-muted); }
+
+  .upload-modal { max-width: 560px; }
+  .upload-form { display: flex; flex-direction: column; gap: 14px; }
+  .upload-form label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+  .upload-form input[type="file"], .upload-form select, .upload-form input[type="text"], .upload-form textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border-default); border-radius: 4px; font-family: var(--font-sans); font-size: 13px; background: var(--bg-canvas); color: var(--text-primary); }
+  .upload-form textarea { min-height: 60px; resize: vertical; }
+  .upload-form .auth-row { display: flex; gap: 14px; }
+  .upload-form .auth-row label.opt { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; }
+
+  .approve-modal { max-width: 1100px; }
+  .draft-card { border: 1px solid var(--border-default); border-radius: 6px; margin-bottom: 12px; }
+  .draft-card.excluded { opacity: 0.5; background: var(--bg-subtle); }
+  .draft-card-head { padding: 10px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; background: var(--bg-subtle); border-bottom: 1px solid var(--border-default); }
+  .draft-card-head input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+  .draft-card-head .dest-row { display: flex; gap: 8px; align-items: center; }
+  .draft-card-head .dest-row .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .draft-card-head .dest-row input { padding: 4px 8px; border: 1px solid var(--border-default); border-radius: 4px; font-family: var(--font-mono); font-size: 11.5px; min-width: 280px; }
+  .draft-card-body { padding: 12px 16px; max-height: 280px; overflow-y: auto; }
+  .draft-card-body .fm-block { background: var(--bg-subtle); border-radius: 4px; padding: 8px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; white-space: pre-wrap; }
+  .draft-card-body .preview { font-size: 12px; color: var(--text-primary); line-height: 1.5; max-height: 200px; overflow-y: auto; }
+  .draft-banner { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; color: var(--warning); font-size: 12.5px; font-weight: 500; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-panel); }
+  ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Solution meta block (mirrors the user-facing UI for visual consistency) */
+  .sol-card {
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--bg-canvas);
+  }
+  .sol-head { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; margin-bottom: 10px; }
+  .sol-rank {
+    width: 22px; height: 22px;
+    border: 1px solid var(--text-primary); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--text-primary);
+  }
+  .sol-action { font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.4; }
+  .sol-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    padding: 4px 0 8px 34px;
+  }
+  @media (max-width: 700px) {
+    .sol-meta { grid-template-columns: 1fr; gap: 8px; padding-left: 0; }
+  }
+  .sol-meta .col-label {
+    font-size: 10px; font-weight: 500; color: var(--text-muted);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .sol-meta .col-value {
+    font-size: 11.5px; font-weight: 500; color: var(--text-primary);
+    display: flex; align-items: center; gap: 8px; line-height: 1.2;
+  }
+  .sol-meta .col-value .cost-usd { color: var(--text-muted); font-weight: 400; }
+  .sol-bars { display: inline-flex; gap: 2px; flex-shrink: 0; }
+  .sol-bars .seg {
+    width: 12px; height: 5px; border-radius: 2px;
+    background: var(--text-muted); opacity: 0.2;
+  }
+  .sol-bars .seg.fill-good  { background: var(--success); opacity: 1; }
+  .sol-bars .seg.fill-akari { background: #D69D3F;       opacity: 1; }
+  .sol-bars .seg.fill-bad   { background: var(--error);   opacity: 1; }
+  .sol-detail { padding: 8px 0 0 34px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .sol-detail .body-lbl {
+    font-size: 10px; font-weight: 500; color: var(--text-muted);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-top: 8px; margin-bottom: 3px;
+  }
+  .sol-detail .body-lbl:first-child { margin-top: 0; }
+  .sol-detail .body-val { color: var(--text-primary); font-size: 12px; }
+  .sol-detail .sol-sources { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  /* Knowledge Gaps tab */
+  .gap-hint { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 4px 0 12px; }
+  .gap-controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12.5px; }
+  .gap-controls select { font-size: 12.5px; padding: 3px 6px; }
+  .gap-check { display: inline-flex; align-items: center; gap: 5px; }
+  .gap-summary { color: var(--text-muted); margin-left: auto; }
+  .gap-empty { color: var(--text-muted); padding: 18px 4px; font-size: 13px; }
+  .gap-err { color: var(--error); padding: 12px; font-size: 13px; }
+  .gap-chips { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .gap-action { font-size: 12px; color: var(--text-secondary); line-height: 1.45; max-width: 360px; }
+  .gap-note { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .gap-pct { color: var(--text-muted); }
+  .gap-buttons { white-space: nowrap; text-align: right; }
+  .gap-buttons .link-btn { background: none; border: none; color: var(--epson-deep-blue); cursor: pointer; font-size: 11.5px; padding: 2px 4px; }
+  .gap-buttons .link-btn:hover { text-decoration: underline; }
+  tr.gap-addressed td { opacity: 0.5; }
+  tr.gap-example td { background: var(--bg-subtle); font-size: 11.5px; color: var(--text-secondary); }
+  .mono { font-family: var(--font-mono); font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useMemo } = React;
+
+function fmtMs(ms) { if (ms == null) return "—"; if (ms >= 1000) return (ms / 1000).toFixed(1) + "s"; return ms + "ms"; }
+// Render a backend UTC timestamp in the viewer's local time.
+// Backend stores UTC (often with +00:00/Z); naive strings are assumed UTC.
+function fmtTs(ts) {
+  if (!ts) return "—";
+  let s = String(ts);
+  if (!/[Zz]|[+\-]\d{2}:?\d{2}$/.test(s)) s = s.replace(" ", "T") + "Z";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return String(ts);
+  const p = new Intl.DateTimeFormat("en-GB", { 
+    year:"numeric", month:"2-digit", day:"2-digit",
+    hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false })
+    .formatToParts(d).reduce((a,x) => (a[x.type] = x.value, a), {});
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+}
+function pct(n, total) { if (!total) return "0%"; return Math.round((n / total) * 100) + "%"; }
+function feedbackBadge(status) {
+  const map = {
+    worked:     { cls: "success", label: "Worked" },
+    didnt_work: { cls: "error",   label: "Didn't work" },
+    pending:    { cls: "muted",   label: "Pending" },
+    deleted:    { cls: "warn",    label: "Deleted" },
+  };
+  const m = map[status] || map.pending;
+  return <span className={"badge " + m.cls}>{m.label}</span>;
+}
+
+// Tiny status LED riding the depth indicator. Intentionally unlabelled: no
+// legend, no tooltip, no column. Reads as decoration to most users.
+// green = internal, blue = internal backup, amber = external last resort.
+function srcLed(src) {
+  const color = { A: "#2E7D32", B: "#2563EB", C: "#F9A825" }[src];
+  if (!color) return null;
+  return <span style={{display:"inline-block", width:8, height:8, borderRadius:"50%",
+    background:color, marginRight:6, verticalAlign:"middle", boxShadow:"0 0 4px " + color}} />;
+}
+
+function Header() {
+  return (
+    <header className="bar">
+      <div>
+        <h1>AKARI</h1>
+        <div className="sub">Admin Monitor</div>
+      </div>
+      <a href="/">← Back to diagnose</a>
+    </header>
+  );
+}
+
+function Tabs({ current, onChange }) {
+  const items = [
+    ["overview",        "Overview"],
+    ["diagnoses",       "Diagnoses"],
+    ["resolution",      "Resolution KPI"],
+    ["knowledge-gaps",  "Knowledge Gaps"],
+    ["wiki",            "Wiki"],
+    ["export",          "Export"],
+  ];
+  return (
+    <div className="tabs">
+      {items.map(([k, label]) => (
+        <button key={k} className={"tab" + (current === k ? " active" : "")} onClick={() => onChange(k)}>{label}</button>
+      ))}
+    </div>
+  );
+}
+
+function useFetch(url, deps = []) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    setData(null); setErr(null);
+    fetch(url).then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(d => { if (!cancelled) setData(d); }).catch(e => { if (!cancelled) setErr(String(e)); });
+    return () => { cancelled = true; };
+  }, deps);
+  return [data, err];
+}
+
+function StatGrid({ items }) {
+  return (
+    <div className="stat-grid">
+      {items.map((it, i) => (
+        <div key={i} className="stat">
+          <div className="lbl">{it.lbl}</div>
+          <div className="num">{it.num}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityCard({ overview }) {
+  if (!overview) return <div className="loading">Loading…</div>;
+  const w24 = overview.windows["24h"] || {};
+  const w7d = overview.windows["7d"] || {};
+  const w1h = overview.windows["1h"] || {};
+  return (
+    <React.Fragment>
+      <StatGrid items={[
+        { lbl: "Last hour",   num: w1h.total ?? "—" },
+        { lbl: "Last 24h",    num: w24.total ?? "—" },
+        { lbl: "Last 7d",     num: w7d.total ?? "—" },
+        { lbl: "All time",    num: overview.total_events ?? "—" },
+      ]} />
+      <div style={{marginTop:14}}>
+        <div className="row"><span className="label">24h users</span><span className="value">{w24.unique_users ?? 0}</span></div>
+        <div className="row"><span className="label">7d users</span><span className="value">{w7d.unique_users ?? 0}</span></div>
+        <div className="row"><span className="label">All-time</span><span className="value">{overview.unique_hashed_users_all_time ?? 0} identities</span></div>
+        {Array.isArray(overview.users_named) && overview.users_named.length > 0 && (
+          <div className="row" style={{alignItems:"flex-start"}}>
+            <span className="label">By user</span>
+            <span className="value" style={{textAlign:"right"}}>
+              {overview.users_named.map((u, i) => (
+                <span key={u.name}>
+                  {i > 0 ? ", " : ""}
+                  <span style={/^(Service \/ headless|user-)/.test(u.name) ? {color:"var(--text-muted)"} : null}>{u.name}</span>
+                  {" "}({u.count})
+                </span>
+              ))}
+            </span>
+          </div>
+        )}
+        <div className="row"><span className="label">Image %</span><span className="value">{w24.image_assisted_rate != null ? Math.round(w24.image_assisted_rate * 100) + "%" : "—"} (24h)</span></div>
+        <div className="row"><span className="label">Errors</span><span className="value">{w24.error ?? 0} ({w24.error_rate != null ? Math.round(w24.error_rate * 100) + "%" : "0%"}) over 24h</span></div>
+        <div className="row"><span className="label">Last OK</span><span className="value">{fmtTs(overview.last_successful_ts)}</span></div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function PerformanceCard({ perf }) {
+  if (!perf) return <div className="loading">Loading…</div>;
+  const tiers = Object.entries(perf.by_tier || {});
+  if (!tiers.length) return <div className="empty">No data in window.</div>;
+  return (
+    <React.Fragment>
+      <div style={{fontSize:11, color:"var(--text-muted)", marginBottom:8}}>Latency over last {perf.window_hours}h, by depth tier (median / p95 / p99)</div>
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>N</th><th>Min</th><th>Median</th><th>p95</th><th>p99</th><th>Max</th></tr>
+        </thead>
+        <tbody>
+          {tiers.map(([tier, s]) => (
+            <tr key={tier}>
+              <td style={{textTransform:"capitalize"}}>{tier}</td>
+              <td className="mono">{s.n}</td>
+              <td className="mono">{s.min_ms != null ? fmtMs(s.min_ms) : "—"}</td>
+              <td className="mono">{s.median_ms != null ? fmtMs(s.median_ms) : "—"}</td>
+              <td className="mono">{s.p95_ms != null ? fmtMs(s.p95_ms) : "—"}</td>
+              <td className="mono">{s.p99_ms != null ? fmtMs(s.p99_ms) : "—"}</td>
+              <td className="mono">{s.max_ms != null ? fmtMs(s.max_ms) : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </React.Fragment>
+  );
+}
+
+function DistributionCard({ data, title }) {
+  if (!data) return <div className="loading">Loading…</div>;
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
+  if (!total) return <div className="empty">No data in window.</div>;
+  const order = ["high", "med", "low", "unknown", "good", "partial", "poor"];
+  const entries = Object.entries(data).sort(([a], [b]) => order.indexOf(a) - order.indexOf(b));
+  return (
+    <React.Fragment>
+      {entries.map(([k, v]) => {
+        const cls = (k === "high" || k === "good") ? "success" : (k === "med" || k === "partial") ? "warn" : (k === "low" || k === "poor") ? "error" : "muted";
+        const w = total ? (v / total) * 100 : 0;
+        return (
+          <div className="bar-row" key={k}>
+            <span className="bar-lbl">{k}</span>
+            <div className="bar-track"><div className={"bar-fill " + cls} style={{width: w + "%"}}></div></div>
+            <span className="bar-num">{v}</span>
+          </div>
+        );
+      })}
+      <div style={{fontSize:11, color:"var(--text-muted)", marginTop:8}}>{total} events in window</div>
+    </React.Fragment>
+  );
+}
+
+function ResolutionCard({ kpi }) {
+  if (!kpi) return <div className="loading">Loading…</div>;
+  const total = (kpi.worked || 0) + (kpi.didnt_work || 0) + (kpi.no_feedback || 0);
+  return (
+    <React.Fragment>
+      <StatGrid items={[
+        { lbl: "Worked",       num: kpi.worked || 0 },
+        { lbl: "Didn't work",  num: kpi.didnt_work || 0 },
+        { lbl: "No feedback",  num: kpi.no_feedback || 0 },
+        { lbl: "Total",        num: total },
+      ]} />
+      <div style={{marginTop:14}}>
+        <div className="bar-row">
+          <span className="bar-lbl">worked</span>
+          <div className="bar-track"><div className="bar-fill success" style={{width: total ? (kpi.worked / total) * 100 + "%" : "0%"}}></div></div>
+          <span className="bar-num">{pct(kpi.worked || 0, total)}</span>
+        </div>
+        <div className="bar-row">
+          <span className="bar-lbl">didn't work</span>
+          <div className="bar-track"><div className="bar-fill error" style={{width: total ? (kpi.didnt_work / total) * 100 + "%" : "0%"}}></div></div>
+          <span className="bar-num">{pct(kpi.didnt_work || 0, total)}</span>
+        </div>
+        <div className="bar-row">
+          <span className="bar-lbl">no feedback</span>
+          <div className="bar-track"><div className="bar-fill muted" style={{width: total ? (kpi.no_feedback / total) * 100 + "%" : "0%"}}></div></div>
+          <span className="bar-num">{pct(kpi.no_feedback || 0, total)}</span>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function ResolutionByTier({ kpi }) {
+  if (!kpi || !kpi.by_tier) return <div className="loading">Loading…</div>;
+  const tiers = Object.entries(kpi.by_tier);
+  if (!tiers.length) return <div className="empty">No data.</div>;
+  return (
+    <table>
+      <thead>
+        <tr><th>Tier</th><th>Worked</th><th>Didn't work</th><th>No feedback</th><th>Total</th><th>Worked %</th></tr>
+      </thead>
+      <tbody>
+        {tiers.map(([tier, s]) => {
+          const total = s.worked + s.didnt_work + s.no_feedback;
+          return (
+            <tr key={tier}>
+              <td style={{textTransform:"capitalize"}}>{tier}</td>
+              <td className="mono">{s.worked}</td>
+              <td className="mono">{s.didnt_work}</td>
+              <td className="mono">{s.no_feedback}</td>
+              <td className="mono">{total}</td>
+              <td className="mono">{pct(s.worked, total)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function fmtNum(n) {
+  if (n == null) return "—";
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return String(n);
+}
+
+function TokenSystemCard({ tokens, system }) {
+  if (!tokens) return <div className="loading">Loading…</div>;
+  const pd = tokens.per_diagnosis || {};
+  const tps = tokens.tokens_per_second_by_tier || {};
+  const sys = system || {};
+  const vramPct = sys.vram_total_mb && sys.vram_used_mb != null
+    ? Math.round((sys.vram_used_mb / sys.vram_total_mb) * 100) : null;
+  const gw = sys.gpu_watch || null;
+  const gwLast = (gw && gw.last) || {};
+  let gwColor = "#999", gwLabel = "GPU monitor: n/a";
+  if (gw && gw.available && gw.degraded) {
+    gwColor = "#F9A825"; gwLabel = "GPU power-capped, failover active";
+  } else if (gw && gw.available) {
+    gwColor = "#2E7D32"; gwLabel = "GPU healthy";
+  }
+  return (
+    <React.Fragment>
+      {gw && (
+        <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:14, padding:"8px 12px", borderRadius:6, background:"#FAFBFC", border:"1px solid var(--border)"}}>
+          <span style={{width:10, height:10, borderRadius:"50%", background:gwColor, flexShrink:0}}></span>
+          <span style={{fontWeight:600, fontSize:13}}>{gwLabel}</span>
+          {gw.available && gwLast.power_limit_w != null && (
+            <span style={{fontSize:12, color:"var(--text-muted)", marginLeft:"auto"}}>
+              {gwLast.power_limit_w}W · {gwLast.pstate} · {gwLast.temp_c}°C{gw.episodes ? ` · ${gw.episodes} episode${gw.episodes===1?"":"s"} since boot` : ""}
+            </span>
+          )}
+        </div>
+      )}
+      <StatGrid items={[
+        { lbl: "Tokens all time",  num: fmtNum(tokens.total_all_time) },
+        { lbl: "Tokens last 7d",   num: fmtNum(tokens.total_7d) },
+        { lbl: "Per-call median",  num: fmtNum(pd.median) },
+        { lbl: "Per-call max",     num: fmtNum(pd.max) },
+      ]} />
+      <div style={{marginTop:14}}>
+        <div className="row"><span className="label">Per call</span><span className="value">min {fmtNum(pd.min)} · median {fmtNum(pd.median)} · max {fmtNum(pd.max)} ({pd.n || 0} samples)</span></div>
+        {["fast", "balanced", "deep"].filter(t => tps[t] != null).map(t => (
+          <div className="row" key={t}><span className="label">{t} tok/s</span><span className="value">{tps[t]}</span></div>
+        ))}
+        <div className="row"><span className="label">Live VRAM</span><span className="value">{sys.vram_used_mb != null ? `${sys.vram_used_mb} / ${sys.vram_total_mb} MB` + (vramPct != null ? ` (${vramPct}%)` : "") : "n/a"}</span></div>
+        <div className="row"><span className="label">Live GPU</span><span className="value">{sys.gpu_util_percent != null ? sys.gpu_util_percent + "%" : "n/a"}</span></div>
+        <div className="row"><span className="label">Live CPU</span><span className="value">{sys.cpu_percent != null ? sys.cpu_percent.toFixed(1) + "%" : "n/a"}</span></div>
+        <div className="row"><span className="label">Live RAM</span><span className="value">{sys.ram_used_mb != null ? `${sys.ram_used_mb} / ${sys.ram_total_mb} MB` : "n/a"}</span></div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function DemoModeCard() {
+  const [data, setData] = useState(null);
+  const load = () => fetch("/admin/demo").then(r => r.ok ? r.json() : null).then(setData).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const toggle = async () => {
+    if (!data) return;
+    await fetch("/admin/demo/toggle", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({enabled: !data.enabled})});
+    load();
+  };
+  const del = async (h) => {
+    await fetch("/admin/demo/" + encodeURIComponent(h), {method:"DELETE"});
+    load();
+  };
+  if (!data) return <div className="loading">Loading…</div>;
+  return (
+    <div>
+      <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:10}}>
+        <button onClick={toggle} style={{padding:"6px 14px", border:"none", borderRadius:4, cursor:"pointer", fontSize:13, fontWeight:600, color:"#fff", background: data.enabled ? "#2E7D32" : "#999"}}>
+          {data.enabled ? "Demo mode: ON" : "Demo mode: OFF"}
+        </button>
+        <span style={{fontSize:12, color:"var(--text-muted)"}}>{data.count} staged answer{data.count===1?"":"s"}</span>
+      </div>
+      <div style={{fontSize:12, color:"var(--text-muted)", marginBottom:8}}>
+        When ON, a staged query returns instantly; anything not staged runs live as normal. Stage a query from any diagnosis using “Approve for demo”.
+      </div>
+      {data.items && data.items.length > 0 && (
+        <table style={{width:"100%", fontSize:12, borderCollapse:"collapse"}}>
+          <thead><tr style={{textAlign:"left", color:"var(--text-muted)"}}><th style={{padding:"4px 6px"}}>Problem</th><th style={{padding:"4px 6px"}}>Depth</th><th style={{padding:"4px 6px"}}>Staged (UTC+3)</th><th></th></tr></thead>
+          <tbody>
+            {data.items.map(it => (
+              <tr key={it.input_hash} style={{borderTop:"1px solid var(--border)"}}>
+                <td style={{padding:"4px 6px"}}>{(it.problem||"").slice(0,80)}</td>
+                <td style={{padding:"4px 6px"}}>{it.depth_tier||"fast"}</td>
+                <td style={{padding:"4px 6px", whiteSpace:"nowrap"}}>{fmtTs(it.approved_at)}</td>
+                <td style={{padding:"4px 6px"}}><button onClick={() => del(it.input_hash)} style={{padding:"2px 8px", border:"none", borderRadius:3, cursor:"pointer", fontSize:11, background:"#C62828", color:"#fff"}}>remove</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function ApproveDemoButton({ diagnosisId }) {
+  const [state, setState] = useState("idle"); // idle | busy | done | err
+  const approve = async () => {
+    setState("busy");
+    try {
+      const r = await fetch("/admin/demo/approve", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({diagnosis_id: diagnosisId})});
+      setState(r.ok ? "done" : "err");
+    } catch { setState("err"); }
+  };
+  const label = state === "busy" ? "Staging…" : state === "done" ? "✓ Staged for demo" : state === "err" ? "Failed, retry" : "Approve for demo";
+  return <button onClick={approve} disabled={state==="busy"||state==="done"} style={{padding:"5px 12px", border:"none", borderRadius:4, cursor: state==="done"?"default":"pointer", fontSize:12, color:"#fff", background: state==="done" ? "#2E7D32" : state==="err" ? "#C62828" : "var(--epson-deep-blue)"}}>{label}</button>;
+}
+
+function Overview() {
+  const [overview] = useFetch("/admin/metrics/overview");
+  const [perf] = useFetch("/admin/metrics/performance?window_hours=24");
+  const [quality] = useFetch("/admin/metrics/quality?window_hours=24");
+  const [resolution] = useFetch("/admin/metrics/resolution");
+  const [tokens] = useFetch("/admin/metrics/tokens");
+  const [system, setSystem] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    function tick() {
+      fetch("/admin/system").then(r => r.ok ? r.json() : null)
+        .then(d => { if (!cancelled) setSystem(d); })
+        .catch(() => {});
+    }
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+  return (
+    <div className="grid grid-2">
+      <div className="card"><h2>Activity</h2><ActivityCard overview={overview} /></div>
+      <div className="card"><h2>Performance (24h)</h2><PerformanceCard perf={perf} /></div>
+      <div className="card" style={{gridColumn:"1 / -1"}}><h2>Token &amp; system load</h2><TokenSystemCard tokens={tokens} system={system} /></div>
+      <div className="card"><h2>Confidence distribution (24h)</h2><DistributionCard data={quality && quality.confidence} /></div>
+      <div className="card"><h2>Coverage distribution (24h)</h2><DistributionCard data={quality && quality.coverage} /></div>
+      <div className="card" style={{gridColumn:"1 / -1"}}><h2>Resolution KPI (all time)</h2><ResolutionCard kpi={resolution} /></div>
+      <div className="card" style={{gridColumn:"1 / -1"}}><h2>Demo mode</h2><DemoModeCard /></div>
+    </div>
+  );
+}
+
+const DIAGNOSES_COLUMNS = [
+  { key: "ts",                    label: "Time (UTC+3)",  type: "string", title: "Diagnosis timestamp" },
+  { key: "user_label",            label: "User",        type: "string", title: "User (resolved from login email; unnamed users show as user-xxxxxxx)" },
+  { key: "depth_tier",            label: "Depth",       type: "string", title: "Depth tier requested" },
+  { key: "confidence_bucket",     label: "Conf",        type: "string", title: "Confidence bucket: high / med / low" },
+  { key: "coverage",              label: "Cov",         type: "string", title: "Wiki coverage assessment" },
+  { key: "latency_ms",            label: "Latency",     type: "number", title: "End-to-end wall time (ms)" },
+  { key: "pages_count",           label: "Pages",       type: "number", title: "Number of wiki pages consulted" },
+  { key: "image_used",            label: "Image",       type: "bool",   title: "Image attached to request" },
+  { key: "success",               label: "Status",      type: "bool",   title: "Whether the call succeeded" },
+  { key: "prompt_tokens",         label: "p_tok",       type: "number", title: "Prompt (input) tokens" },
+  { key: "response_tokens",       label: "r_tok",       type: "number", title: "Response (output) tokens" },
+  { key: "tokens_per_second",     label: "tok/s",       type: "number", title: "Output generation rate" },
+  { key: "gpu_util_percent_avg",  label: "gpu%",        type: "number", title: "Average GPU utilization during inference" },
+  { key: "vram_used_mb_peak",     label: "vram",        type: "number", title: "Peak VRAM used during inference (MB)" },
+  { key: "inference_duration_ms", label: "inf_ms",      type: "number", title: "Inference time only (prompt eval + generation, ms)" },
+  { key: "feedback_status",       label: "Feedback",    type: "string", title: "Feedback outcome" },
+];
+
+function compareRows(a, b, key, dir) {
+  let va = a[key];
+  let vb = b[key];
+  if (va == null && vb == null) return 0;
+  if (va == null) return 1;   // nulls last regardless of dir
+  if (vb == null) return -1;
+  if (typeof va === "boolean") va = va ? 1 : 0;
+  if (typeof vb === "boolean") vb = vb ? 1 : 0;
+  if (va < vb) return dir === "asc" ? -1 : 1;
+  if (va > vb) return dir === "asc" ? 1 : -1;
+  return 0;
+}
+
+function isServiceRow(row) {
+  // "Service / headless" = a diagnose with no authenticated user (test/health/
+  // warmup traffic or service-token calls). Kept in the DB; hidden by default.
+  return !row.hashed_user_short || /^Service \/ headless/.test(row.user_label || "");
+}
+
+// One string per (row, column), used for BOTH the filter options and matching,
+// so a filter always matches exactly what the cell shows.
+function diagFilterToken(row, key) {
+  switch (key) {
+    case "ts":         return fmtTs(row.ts);
+    case "user_label": return row.user_label || "—";
+    case "image_used": return row.image_used ? "image" : "—";
+    case "success":    return row.success ? "ok" : (row.error_class || "error");
+    default: {
+      const v = row[key];
+      return v == null ? "—" : String(v);
+    }
+  }
+}
+
+// Header cell: sortable label + a multi-select value filter. Click the chip to
+// open a popover with a checklist of the distinct values present in that column
+// (with counts) plus a search box for long lists. No typing required to filter.
+function ColumnFilter({ col, options, selected, onChange, onSort, arrow, open, setOpen }) {
+  const [q, setQ] = useState("");
+  const [pos, setPos] = useState(null);
+  const isOpen = open === col.key;
+  const sel = new Set(selected || []);
+  const shown = q ? options.filter(o => o.value.toLowerCase().includes(q.toLowerCase())) : options;
+
+  function openPop(e) {
+    e.stopPropagation();
+    if (isOpen) { setOpen(null); return; }
+    const r = e.currentTarget.getBoundingClientRect();
+    const POPW = 290;
+    // Open under the chip; if that would overflow the right edge (last columns
+    // like Feedback), right-align the popover to the chip so it opens leftward.
+    let left = r.left;
+    if (left + POPW > window.innerWidth - 8) { left = r.right - POPW; }
+    setPos({ top: r.bottom + 4, left: Math.max(8, left) });
+    setQ("");
+    setOpen(col.key);
+  }
+  function toggle(v) {
+    const n = new Set(sel);
+    if (n.has(v)) { n.delete(v); } else { n.add(v); }
+    onChange(col.key, [...n]);
+  }
+
+  return (
+    <th style={{whiteSpace:"nowrap"}} title={col.title}>
+      <span className="th-label" onClick={() => onSort(col.key)}>{col.label}{arrow}</span>
+      <button className={"th-filter" + (sel.size ? " active" : "")} onClick={openPop}
+              title={sel.size ? sel.size + " selected" : "Filter"}>
+        {sel.size ? sel.size : "▾"}
+      </button>
+      {isOpen && pos && (
+        <React.Fragment>
+          <div className="cf-backdrop" onClick={() => setOpen(null)} />
+          <div className="cf-pop" style={{top: pos.top, left: pos.left}} onClick={e => e.stopPropagation()}>
+            <input className="cf-search" placeholder="search values…" value={q} autoFocus
+                   onChange={e => setQ(e.target.value)} />
+            <div className="cf-actions">
+              <button onClick={() => onChange(col.key, options.map(o => o.value))}>select all</button>
+              <button onClick={() => onChange(col.key, [])}>clear</button>
+            </div>
+            <div className="cf-list">
+              {shown.length === 0 && <div className="cf-empty">no values</div>}
+              {shown.map(o => (
+                <label key={o.value} className="cf-item">
+                  <input type="checkbox" checked={sel.has(o.value)} onChange={() => toggle(o.value)} />
+                  <span className="cf-val">{o.value}</span>
+                  <span className="cf-count">{o.count}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </React.Fragment>
+      )}
+    </th>
+  );
+}
+
+function Diagnoses() {
+  const [sortKey, setSortKey] = useState("ts");
+  const [sortDir, setSortDir] = useState("desc");
+  const [showService, setShowService] = useState(false);
+  const [filters, setFilters] = useState({});
+  const [openCol, setOpenCol] = useState(null);
+  const [page, setPage] = useState(0);
+  const [selectedId, setSelectedId] = useState(null);
+  const pageSize = 50;
+  // Fetch the full history once, then hide/filter/sort/paginate client-side so
+  // every column filter searches across all traffic, not just the current page.
+  const [list] = useFetch("/admin/diagnoses?limit=5000&offset=0");
+
+  function onSort(key) {
+    if (sortKey === key) { setSortDir(sortDir === "asc" ? "desc" : "asc"); }
+    else { setSortKey(key); setSortDir(key === "ts" ? "desc" : "asc"); }
+  }
+  function setFilter(key, val) { setFilters(f => ({ ...f, [key]: val })); setPage(0); }
+
+  const allItems = list ? list.items : [];
+  const serviceCount = useMemo(() => allItems.filter(isServiceRow).length, [allItems]);
+  const userCount = allItems.length - serviceCount;
+  const baseItems = useMemo(
+    () => showService ? allItems : allItems.filter(r => !isServiceRow(r)),
+    [allItems, showService]
+  );
+  const options = useMemo(() => {
+    const d = {};
+    DIAGNOSES_COLUMNS.forEach(col => {
+      const m = new Map();
+      baseItems.forEach(r => {
+        const t = diagFilterToken(r, col.key);
+        m.set(t, (m.get(t) || 0) + 1);
+      });
+      d[col.key] = [...m.entries()]
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => a.value < b.value ? -1 : a.value > b.value ? 1 : 0);
+    });
+    return d;
+  }, [baseItems]);
+  const filtered = useMemo(() => baseItems.filter(row =>
+    DIAGNOSES_COLUMNS.every(col => {
+      const sel = filters[col.key];
+      if (!sel || sel.length === 0) return true;
+      return sel.indexOf(diagFilterToken(row, col.key)) !== -1;
+    })
+  ), [baseItems, filters]);
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir]
+  );
+  const activeFilters = Object.values(filters).filter(v => v && v.length).length;
+  const pageItems = sorted.slice(page * pageSize, page * pageSize + pageSize);
+
+  if (!list) return <div className="loading">Loading…</div>;
+  const arrow = (k) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+  return (
+    <React.Fragment>
+      <div className="toolbar">
+        <label style={{display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer"}}>
+          <input type="checkbox" checked={showService} onChange={e => { setShowService(e.target.checked); setPage(0); }} />
+          <span style={{color:"var(--text-secondary)"}}>Show service / headless</span>
+        </label>
+        <span style={{color:"var(--text-muted)"}}>
+          {userCount} user · {serviceCount} service {showService ? "(shown)" : "hidden"}
+          {activeFilters > 0 ? ` · ${sorted.length} match` : ""}
+        </span>
+        {activeFilters > 0 && <button onClick={() => { setFilters({}); setPage(0); }}>clear filters</button>}
+        <span className="right"></span>
+        <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>← prev</button>
+        <span style={{color:"var(--text-muted)", fontSize:11}}>
+          {sorted.length === 0 ? "0" : (page * pageSize + 1) + "–" + Math.min((page + 1) * pageSize, sorted.length)} of {sorted.length}
+        </span>
+        <button onClick={() => setPage(page + 1)} disabled={(page + 1) * pageSize >= sorted.length}>next →</button>
+      </div>
+      <div className="card" style={{padding:0, overflowX:"auto"}}>
+        <table>
+          <thead>
+            <tr>
+              {DIAGNOSES_COLUMNS.map(col => (
+                <ColumnFilter key={col.key} col={col}
+                  options={options[col.key] || []}
+                  selected={filters[col.key]}
+                  onChange={setFilter}
+                  onSort={onSort}
+                  arrow={arrow(col.key)}
+                  open={openCol} setOpen={setOpenCol} />
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pageItems.length === 0 && <tr><td colSpan={DIAGNOSES_COLUMNS.length} className="empty">No diagnoses.</td></tr>}
+            {pageItems.map(row => (
+              <tr key={row.diagnosis_id} className="row-link" onClick={() => setSelectedId(row.diagnosis_id)}>
+                <td className="mono">{fmtTs(row.ts)}</td>
+                <td>{(() => {
+                  const lbl = row.user_label || "—";
+                  const muted = /^(Service \/ headless|user-)/.test(lbl);
+                  return <span style={muted ? {color:"var(--text-muted)"} : null} title={row.hashed_user_short || ""}>{lbl}</span>;
+                })()}</td>
+                <td><span style={{whiteSpace:"nowrap"}}>{srcLed(row.src)}<span className="badge muted">{row.depth_tier || "—"}</span></span></td>
+                <td>{row.confidence_bucket ? <span className={"badge " + (row.confidence_bucket === "high" ? "success" : row.confidence_bucket === "med" ? "warn" : "error")}>{row.confidence_bucket}</span> : "—"}</td>
+                <td>{row.coverage ? <span className={"badge " + (row.coverage === "good" ? "success" : row.coverage === "partial" ? "warn" : "error")}>{row.coverage}</span> : "—"}</td>
+                <td className="mono">{fmtMs(row.latency_ms)}</td>
+                <td className="mono">{row.pages_count ?? "—"}</td>
+                <td>{row.image_used ? <span className="badge info">image</span> : <span style={{color:"var(--text-muted)"}}>—</span>}</td>
+                <td>{row.success ? <span className="badge success">ok</span> : <span className="badge error">{row.error_class || "error"}</span>}</td>
+                <td className="mono">{fmtNum(row.prompt_tokens)}</td>
+                <td className="mono">{fmtNum(row.response_tokens)}</td>
+                <td className="mono">{row.tokens_per_second != null ? row.tokens_per_second.toFixed(1) : "—"}</td>
+                <td className="mono">{row.gpu_util_percent_avg != null ? row.gpu_util_percent_avg.toFixed(0) + "%" : "—"}</td>
+                <td className="mono">{row.vram_used_mb_peak != null ? row.vram_used_mb_peak + " MB" : "—"}</td>
+                <td className="mono">{row.inference_duration_ms != null ? fmtMs(row.inference_duration_ms) : "—"}</td>
+                <td>{feedbackBadge(row.feedback_status)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {selectedId && <DiagnosisModal diagnosisId={selectedId} onClose={() => setSelectedId(null)} />}
+    </React.Fragment>
+  );
+}
+
+function DiagnosisModal({ diagnosisId, onClose }) {
+  const [detail] = useFetch("/admin/diagnoses/" + encodeURIComponent(diagnosisId));
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <h2>Diagnosis · {diagnosisId.slice(0, 16)}…</h2>
+            <div style={{fontSize:11, color:"var(--text-muted)", marginTop:2, fontFamily:"var(--font-mono)"}}>{diagnosisId}</div>
+          </div>
+          <div style={{display:"flex", gap:8, alignItems:"center"}}>
+            <ApproveDemoButton diagnosisId={diagnosisId} />
+            <button className="close" onClick={onClose}>close ✕</button>
+          </div>
+        </div>
+        <div className="modal-body">
+          {!detail ? <div className="loading">Loading…</div> : <DiagnosisDetail d={detail} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Shared with ui/index.html (kept in sync manually) — bar-segment severity map.
+const ADMIN_DIFF_MAP = {
+  easy:   { fill: 2, color: "good"  },
+  low:    { fill: 2, color: "good"  },
+  medium: { fill: 3, color: "akari" },
+  hard:   { fill: 4, color: "bad"   },
+  high:   { fill: 4, color: "bad"   },
+};
+const ADMIN_COST_MAP = {
+  free:      { fill: 1, color: "good"  },
+  low:       { fill: 2, color: "good"  },
+  medium:    { fill: 3, color: "akari" },
+  high:      { fill: 4, color: "bad"   },
+  very_high: { fill: 5, color: "bad"   },
+};
+function adminTimeBucket(minutes) {
+  const m = Number(minutes) || 0;
+  if (m <= 0) return null;
+  if (m < 30) return { label: "Quick",    fill: 2, color: "good"  };
+  if (m <= 90) return { label: "Moderate", fill: 3, color: "akari" };
+  return                  { label: "Long",     fill: 4, color: "bad"   };
+}
+
+function AdminBars({ fill, color }) {
+  return (
+    <span className="sol-bars" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i} className={"seg" + (i < fill ? " fill-" + color : "")}></span>
+      ))}
+    </span>
+  );
+}
+
+function AdminSolution({ s, idx }) {
+  const diffKey = (s.difficulty || "").toLowerCase();
+  const costKey = (s.cost || "").toLowerCase();
+  const diffBars = ADMIN_DIFF_MAP[diffKey];
+  const costBars = ADMIN_COST_MAP[costKey];
+  const timeBars = adminTimeBucket(s.estimated_time_minutes);
+  const sources = s.wiki_sources || [];
+  const cap = x => x ? x.charAt(0).toUpperCase() + x.slice(1).replace(/_/g, " ") : "—";
+
+  return (
+    <div className="sol-card">
+      <div className="sol-head">
+        <div className="sol-rank">{s.rank || idx + 1}</div>
+        <div className="sol-action">{s.action || "(no action)"}</div>
+      </div>
+      <div className="sol-meta">
+        <div>
+          <div className="col-label">Difficulty</div>
+          <div className="col-value">
+            {diffBars && <AdminBars fill={diffBars.fill} color={diffBars.color} />}
+            <span>{cap(diffKey)}</span>
+          </div>
+        </div>
+        <div>
+          <div className="col-label">Cost</div>
+          <div className="col-value">
+            {costBars && <AdminBars fill={costBars.fill} color={costBars.color} />}
+            <span>{cap(costKey)}</span>
+          </div>
+        </div>
+        <div>
+          <div className="col-label">Time</div>
+          <div className="col-value">
+            {timeBars && <AdminBars fill={timeBars.fill} color={timeBars.color} />}
+            <span>{timeBars ? timeBars.label : "—"}</span>
+          </div>
+        </div>
+      </div>
+      {(s.reasoning || sources.length > 0) && (
+        <div className="sol-detail">
+          {s.reasoning && (
+            <React.Fragment>
+              <div className="body-lbl">Reasoning</div>
+              <div className="body-val">{s.reasoning}</div>
+            </React.Fragment>
+          )}
+          {sources.length > 0 && (
+            <React.Fragment>
+              <div className="body-lbl">Sources</div>
+              <div className="sol-sources">{sources.join(", ")}</div>
+            </React.Fragment>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserInputAndOutput({ d }) {
+  const fr = d.full_response || null;
+  const dx = (fr && fr.diagnosis) || {};
+  const solutions = (fr && fr.solutions) || [];
+  const esc = (fr && fr.escalation_draft) || null;
+  const noInput = d.problem_text == null && d.model_input == null;
+  const noOutput = !fr;
+  if (noInput && noOutput) {
+    return (
+      <React.Fragment>
+        <div className="section-title">User input &amp; model output</div>
+        <div className="empty">Not captured. This row predates the 2026-05-24 audit storage (schema v3).</div>
+      </React.Fragment>
+    );
+  }
+  return (
+    <React.Fragment>
+      <div className="section-title">User input &amp; model output</div>
+      <div className="card" style={{borderLeft:"3px solid var(--epson-deep-blue)"}}>
+        <div className="kv" style={{marginBottom:8}}>
+          <span className="k">Problem</span>
+          <span className="v" style={{whiteSpace:"pre-wrap"}}>{d.problem_text || <span style={{color:"var(--text-muted)"}}>(empty)</span>}</span>
+          <span className="k">Model</span>
+          <span className="v">{d.model_input || <span style={{color:"var(--text-muted)"}}>(none)</span>}</span>
+          <span className="k">Depth</span>
+          <span className="v">{d.depth_tier || "—"}</span>
+          <span className="k">IPS log</span>
+          <span className="v">
+            {d.ips_log_summary ? (
+              <details><summary style={{cursor:"pointer"}}>parsed (click to expand)</summary>
+                <pre className="code" style={{marginTop:6}}>{d.ips_log_summary}</pre>
+              </details>
+            ) : <span style={{color:"var(--text-muted)"}}>not provided</span>}
+          </span>
+        </div>
+
+        {fr ? (
+          <React.Fragment>
+            <div style={{borderTop:"1px solid var(--border-default)", margin:"12px 0 10px 0"}}></div>
+            <div className="kv">
+              <span className="k">Primary cause</span>
+              <span className="v" style={{whiteSpace:"pre-wrap"}}>{dx.primary_cause || "—"}</span>
+              <span className="k">Confidence</span>
+              <span className="v">{dx.confidence != null ? dx.confidence.toFixed(2) : "—"} {d.confidence_bucket ? "(" + d.confidence_bucket + ")" : ""}</span>
+              <span className="k">Coverage</span>
+              <span className="v">{d.coverage || "—"}</span>
+            </div>
+            {dx.reasoning && (
+              <details style={{marginTop:10}}>
+                <summary style={{cursor:"pointer", fontSize:12, color:"var(--text-secondary)"}}>Reasoning</summary>
+                <pre className="code" style={{marginTop:6, whiteSpace:"pre-wrap"}}>{dx.reasoning}</pre>
+              </details>
+            )}
+            {solutions.length > 0 && (
+              <details style={{marginTop:10}} open>
+                <summary style={{cursor:"pointer", fontSize:12, color:"var(--text-secondary)"}}>Solutions ({solutions.length})</summary>
+                <div style={{marginTop:10}}>
+                  {solutions.map((s, i) => <AdminSolution key={i} s={s} idx={i} />)}
+                </div>
+              </details>
+            )}
+            {esc && (
+              <details style={{marginTop:6}}>
+                <summary style={{cursor:"pointer", fontSize:12, color:"var(--text-secondary)"}}>Escalation draft</summary>
+                <div className="kv" style={{marginTop:8, fontSize:12}}>
+                  <span className="k">Summary</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.summary || "—"}</span>
+                  <span className="k">Model / Serial</span><span className="v">{(esc.model || "—") + " / " + (esc.serial || "—")}</span>
+                  <span className="k">Firmware</span><span className="v">{esc.firmware_version || "—"}</span>
+                  <span className="k">Problem description</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.symptoms || "—"}</span>
+                  <span className="k">Error evidence</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.error_evidence || "—"}</span>
+                  <span className="k">References checked</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.references_checked || "—"}</span>
+                  <span className="k">Tried steps</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.tried_steps || "—"}</span>
+                  <span className="k">Environment</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.environment || "—"}</span>
+                  <span className="k">Connection</span><span className="v">{esc.connection_type || "—"}</span>
+                  <span className="k">Reproduction</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.reproduction || "—"}</span>
+                  <span className="k">Diagnostic logs</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.diagnostic_logs || "—"}</span>
+                  <span className="k">Impact</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.impact || "—"}</span>
+                  <span className="k">Suspected cause</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.suspected_cause || "—"}</span>
+                  <span className="k">Recommended next</span><span className="v" style={{whiteSpace:"pre-wrap"}}>{esc.recommended_next || "—"}</span>
+                </div>
+              </details>
+            )}
+            <div style={{marginTop:12, padding:"12px 14px", border:"1px solid var(--border-default)", borderRadius:4, background:"var(--bg-subtle)"}}>
+              <div style={{fontSize:10, fontWeight:600, color:"var(--text-muted)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:6}}>Disclaimer</div>
+              <div style={{fontSize:11, color:"var(--text-muted)", lineHeight:1.5}}>
+                This diagnosis is generated by AKARI based on documented failure patterns and technical references. Recommendations are for technician guidance only. Actual repair times, costs, and parts availability vary by region, model revision, and individual case. Always verify with current service documentation and authorized parts catalogs before performing repairs. AKARI is a decision-support tool, not a substitute for qualified technician judgment.
+              </div>
+            </div>
+          </React.Fragment>
+        ) : (
+          <div className="empty" style={{padding:"12px 0 0 0"}}>No model output captured for this row.</div>
+        )}
+      </div>
+    </React.Fragment>
+  );
+}
+
+function DiagnosisDetail({ d }) {
+  const qc = d.query_classification || {};
+  const srcMap = { "local-pc": "A", "remote": "B" };
+  const srcCode = srcMap[(qc.backend || {}).label] || null;
+  return (
+    <React.Fragment>
+      <div className="section-title">Event metadata</div>
+      <div className="grid grid-3">
+        <div className="kv">
+          <span className="k">Timestamp</span><span className="v">{fmtTs(d.ts)} UTC+3</span>
+          <span className="k">User</span><span className="v">{d.user_label || (d.hashed_user ? d.hashed_user.slice(0,16) + "…" : "(none — service token or localhost)")}</span>
+          <span className="k">Latency</span><span className="v">{fmtMs(d.latency_ms)}</span>
+        </div>
+        <div className="kv">
+          <span className="k">Depth tier</span><span className="v">{srcLed(srcCode)}{d.depth_tier || "—"}</span>
+          <span className="k">Confidence</span><span className="v">{d.confidence != null ? d.confidence.toFixed(2) + " (" + d.confidence_bucket + ")" : "—"}</span>
+          <span className="k">Coverage</span><span className="v">{d.coverage}</span>
+        </div>
+        <div className="kv">
+          <span className="k">Success</span><span className="v">{d.success ? <span className="badge success">yes</span> : <span className="badge error">{d.error_class || "error"}</span>}</span>
+          <span className="k">Pages</span><span className="v">{d.pages_count}</span>
+          <span className="k">Image</span><span className="v">{d.image_used ? <span className="badge info">used</span> : <span style={{color:"var(--text-muted)"}}>no</span>}</span>
+          <span className="k">Cond. Diag.</span><span className="v">{(qc.cd || {}).values_given ? <span className="badge info">{(qc.cd || {}).verdict || "values"}{(qc.cd || {}).reference_only ? " (ref)" : ""}</span> : (qc.cd || {}).suggested ? <span className="badge">asked</span> : <span style={{color:"var(--text-muted)"}}>—</span>}</span>
+        </div>
+      </div>
+
+      <UserInputAndOutput d={d} />
+
+      <div className="section-title">Inference cost &amp; system load</div>
+      <div className="grid grid-3">
+        <div className="kv">
+          <span className="k">Prompt tokens</span><span className="v">{fmtNum(d.prompt_tokens)}</span>
+          <span className="k">Response tokens</span><span className="v">{fmtNum(d.response_tokens)}</span>
+          <span className="k">Total tokens</span><span className="v">{fmtNum(d.total_tokens)}</span>
+        </div>
+        <div className="kv">
+          <span className="k">Tokens/sec</span><span className="v">{d.tokens_per_second != null ? d.tokens_per_second.toFixed(1) : "—"}</span>
+          <span className="k">Inference time</span><span className="v">{d.inference_duration_ms != null ? fmtMs(d.inference_duration_ms) : "—"}</span>
+          <span className="k">Wall latency</span><span className="v">{fmtMs(d.latency_ms)}</span>
+        </div>
+        <div className="kv">
+          <span className="k">GPU util (avg)</span><span className="v">{d.gpu_util_percent_avg != null ? d.gpu_util_percent_avg.toFixed(0) + "%" : "n/a"}</span>
+          <span className="k">VRAM peak</span><span className="v">{d.vram_used_mb_peak != null ? d.vram_used_mb_peak + " MB" : "n/a"}</span>
+          <span className="k">CPU / RAM</span><span className="v">{d.cpu_percent_avg != null ? d.cpu_percent_avg.toFixed(1) + "% / " : "—/ "}{d.ram_used_mb_peak != null ? d.ram_used_mb_peak + " MB" : "—"}</span>
+        </div>
+      </div>
+
+      <div className="section-title">Why these pages? (retrieval driver)</div>
+      <div className="grid grid-3">
+        <div className="kv">
+          <span className="k">Models matched</span><span className="v">{(qc.models || []).join(", ") || "(none)"}</span>
+        </div>
+        <div className="kv">
+          <span className="k">Error codes</span><span className="v">{(qc.error_codes || []).join(", ") || "(none)"}</span>
+        </div>
+        <div className="kv">
+          <span className="k">Depth requested</span><span className="v">{qc.depth_tier_requested || "—"} (thinking: {String(qc.use_thinking)})</span>
+        </div>
+      </div>
+
+      <div className="section-title">Wiki pages consulted ({(d.wiki_pages_used || []).length})</div>
+      {(d.wiki_pages_used || []).map((p, i) => (
+        <div className="page-card" key={i}>
+          <div className="path">{p.path}</div>
+          <div className="pmeta">
+            <span className={"pill " + (p.origin || "original")}>{p.origin || "original"}</span>
+            <span>sha {p.content_sha256 ? p.content_sha256.slice(0,12) + "…" : "—"}</span>
+            <span>commit {p.git_commit_id ? p.git_commit_id.slice(0,8) + "…" : "—"}</span>
+            <span>{(p.history || []).length} history entr{(p.history || []).length === 1 ? "y" : "ies"}</span>
+          </div>
+        </div>
+      ))}
+
+      {d.feedback ? (
+        <React.Fragment>
+          <div className="section-title">Feedback</div>
+          {d.feedback.deleted ? (
+            <div className="card" style={{borderLeft:"3px solid var(--warning)"}}>
+              <span className="badge warn">deleted</span>
+              <span style={{marginLeft:10, fontSize:12, color:"var(--text-muted)"}}>Last updated {fmtTs(d.feedback.last_updated)}</span>
+            </div>
+          ) : (
+            <div className="card">
+              <div className="kv">
+                <span className="k">Outcome</span><span className="v">{d.feedback.worked ? <span className="badge success">Worked</span> : <span className="badge error">Didn't work</span>}</span>
+                <span className="k">Submitted</span><span className="v">{fmtTs(d.feedback.feedback_ts)}</span>
+                <span className="k">Updated</span><span className="v">{fmtTs(d.feedback.last_updated)}</span>
+              </div>
+              {d.feedback.what_fixed_it && (
+                <React.Fragment>
+                  <div className="section-title" style={{marginTop:14}}>What actually fixed it</div>
+                  <pre className="code">{d.feedback.what_fixed_it}</pre>
+                </React.Fragment>
+              )}
+              {d.feedback.notes && (
+                <React.Fragment>
+                  <div className="section-title">Notes</div>
+                  <pre className="code">{d.feedback.notes}</pre>
+                </React.Fragment>
+              )}
+              {Array.isArray(d.feedback.updates) && d.feedback.updates.length > 0 && (
+                <React.Fragment>
+                  <div className="section-title">Follow-up updates ({d.feedback.updates.length})</div>
+                  {d.feedback.updates.map(u => (
+                    <div key={u.id} style={{marginBottom:8, padding:"8px 10px", background:"var(--bg-subtle)", border:"1px solid var(--border-default)", borderRadius:6}}>
+                      <div style={{fontSize:11, color:"var(--text-muted)", marginBottom:3}}>{fmtTs(u.update_ts)} UTC+3</div>
+                      <div style={{fontSize:13, whiteSpace:"pre-wrap"}}>{u.text}</div>
+                    </div>
+                  ))}
+                </React.Fragment>
+              )}
+              {d.feedback.problem_text && (
+                <React.Fragment>
+                  <div className="section-title">Original problem text</div>
+                  <pre className="code">{d.feedback.problem_text}</pre>
+                </React.Fragment>
+              )}
+              {d.feedback.diagnosis_response && d.feedback.diagnosis_response.diagnosis && (
+                <React.Fragment>
+                  <div className="section-title">Diagnosis cause that was given</div>
+                  <pre className="code">{d.feedback.diagnosis_response.diagnosis.primary_cause}</pre>
+                </React.Fragment>
+              )}
+            </div>
+          )}
+        </React.Fragment>
+      ) : (
+        <React.Fragment>
+          <div className="section-title">Feedback</div>
+          <div className="empty">No feedback submitted. Diagnosis text retained for admin audit only (strict opsec, never exposed to user UI).</div>
+        </React.Fragment>
+      )}
+    </React.Fragment>
+  );
+}
+
+function CdOutcomesCard() {
+  const [m] = useFetch("/admin/metrics/cd-outcomes");
+  if (!m) return <div className="loading">Loading…</div>;
+  const rows = Object.entries(m.by_verdict || {});
+  return (
+    <React.Fragment>
+      <StatGrid items={[
+        { lbl: "Diagnoses with verdict", num: m.total_with_verdict || 0 },
+        { lbl: "Part reported",          num: m.with_part_info || 0 },
+        { lbl: "Verdict matched part",   num: m.agree || 0 },
+        { lbl: "Accuracy",               num: m.accuracy_pct == null ? "—" : m.accuracy_pct + "%" },
+      ]} />
+      {rows.length > 0 && (
+        <table style={{marginTop:14}}>
+          <thead><tr><th>Verdict</th><th>Total</th><th>Matched</th><th>Mismatched</th><th>No part info</th><th>Worked</th></tr></thead>
+          <tbody>
+            {rows.map(([v, r]) => (
+              <tr key={v}><td>{v.replace(/_/g, " ")}</td><td className="mono">{r.total}</td><td className="mono">{r.agree}</td><td className="mono">{r.disagree}</td><td className="mono">{r.no_part_info}</td><td className="mono">{r.worked}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {rows.length === 0 && <div style={{fontSize:12, color:"var(--text-muted)", marginTop:8}}>No feedback with a Condition Diagnosis verdict yet.</div>}
+    </React.Fragment>
+  );
+}
+
+function Resolution() {
+  const [kpiAll] = useFetch("/admin/metrics/resolution");
+  const [kpi24] = useFetch("/admin/metrics/resolution?window_hours=24");
+  const [kpi7d] = useFetch("/admin/metrics/resolution?window_hours=168");
+  return (
+    <div className="grid">
+      <div className="card"><h2>Resolution KPI · all time</h2><ResolutionCard kpi={kpiAll} /></div>
+      <div className="grid grid-2">
+        <div className="card"><h2>Last 24h</h2><ResolutionCard kpi={kpi24} /></div>
+        <div className="card"><h2>Last 7 days</h2><ResolutionCard kpi={kpi7d} /></div>
+      </div>
+      <div className="card"><h2>By depth tier · all time</h2><ResolutionByTier kpi={kpiAll} /></div>
+      <div className="card"><h2>Condition Diagnosis · verdict vs part replaced</h2><CdOutcomesCard /></div>
+    </div>
+  );
+}
+
+function Export() {
+  return (
+    <div className="card">
+      <h2>Exports</h2>
+      <p style={{color:"var(--text-secondary)", fontSize:13, marginBottom:18}}>
+        Download feedback records as CSV. Suitable for monthly KPI reports.
+        Includes hashed user identifiers (full SHA256), worked / didn't-work outcomes,
+        what-actually-fixed-it free text, and any notes.
+      </p>
+      <a href="/admin/export/feedback.csv" download="">
+        <button className="btn-primary">Download feedback.csv</button>
+      </a>
+    </div>
+  );
+}
+
+// ---------- Knowledge Gaps tab ----------
+
+function GapChips({ g }) {
+  const chips = [];
+  if (g.didnt_work)       chips.push(["error", g.didnt_work + " didn't work"]);
+  if (g.poor_coverage)    chips.push(["warn",  g.poor_coverage + " poor cov"]);
+  if (g.partial_coverage) chips.push(["muted", g.partial_coverage + " partial cov"]);
+  if (g.low_confidence)   chips.push(["muted", g.low_confidence + " low conf"]);
+  if (g.thin_pages)       chips.push(["muted", g.thin_pages + " thin pages"]);
+  return <span className="gap-chips">{chips.map(([cls, txt], i) => (
+    <span key={i} className={"badge " + cls}>{txt}</span>
+  ))}</span>;
+}
+
+function KnowledgeGaps() {
+  const [windowHours, setWindowHours] = useState(null);
+  const [includeAddressed, setIncludeAddressed] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [expanded, setExpanded] = useState({});
+
+  const url = "/admin/knowledge-gaps?" +
+    (windowHours != null ? "window_hours=" + windowHours + "&" : "") +
+    "include_addressed=" + (includeAddressed ? "true" : "false");
+
+  useEffect(() => {
+    let cancelled = false;
+    setData(null); setErr(null);
+    fetch(url).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(d => { if (!cancelled) setData(d); })
+      .catch(e => { if (!cancelled) setErr(String(e)); });
+    return () => { cancelled = true; };
+  }, [url, reload]);
+
+  async function setStatus(gapKey, status) {
+    try {
+      const r = await fetch("/admin/knowledge-gaps/status", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gap_key: gapKey, status }),
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      setReload(x => x + 1);
+    } catch (e) { alert("Failed to update: " + e); }
+  }
+
+  if (err) return <div className="card"><div className="gap-err">Failed to load gaps: {err}</div></div>;
+  if (!data) return <div className="loading">Loading…</div>;
+
+  return (
+    <div>
+      <div className="card">
+        <h2>Knowledge Gaps</h2>
+        <p className="gap-hint">What the wiki answers poorly, ranked from real diagnose traffic. A query is weak when coverage is poor or partial, confidence is low, one or zero wiki pages were used, or the user said it didn't work. Use it to decide what to ingest next.</p>
+        <div className="gap-controls">
+          <label>Window{" "}
+            <select value={windowHours == null ? "all" : String(windowHours)}
+                    onChange={e => setWindowHours(e.target.value === "all" ? null : Number(e.target.value))}>
+              <option value="all">All time</option>
+              <option value="24">Last 24h</option>
+              <option value="168">Last 7d</option>
+              <option value="720">Last 30d</option>
+            </select>
+          </label>
+          <label className="gap-check"><input type="checkbox" checked={includeAddressed}
+                 onChange={e => setIncludeAddressed(e.target.checked)} /> show addressed</label>
+          <span className="gap-summary">{data.gap_count} gaps · {data.total_events} events analyzed</span>
+        </div>
+      </div>
+
+      <div className="card">
+        {data.gaps.length === 0 ? (
+          <div className="gap-empty">No open knowledge gaps in this window. The wiki is keeping up.</div>
+        ) : (
+          <table>
+            <thead><tr>
+              <th>Model</th><th>Theme</th><th>Weak / total</th><th>Signals</th>
+              <th>Last seen</th><th>Suggested action</th><th></th>
+            </tr></thead>
+            <tbody>
+              {data.gaps.map(g => (
+                <React.Fragment key={g.gap_key}>
+                  <tr className={g.status === "addressed" ? "gap-addressed" : ""}>
+                    <td className="mono">{g.model}</td>
+                    <td>{g.theme}</td>
+                    <td><strong>{g.weak}</strong> / {g.total} <span className="gap-pct">({g.weak_pct}%)</span></td>
+                    <td><GapChips g={g} /></td>
+                    <td className="mono">{fmtTs(g.last_seen)}</td>
+                    <td className="gap-action">{g.suggested_action}{g.note ? <div className="gap-note">note: {g.note}</div> : null}</td>
+                    <td className="gap-buttons">
+                      {g.examples && g.examples.length > 0 &&
+                        <button className="link-btn" onClick={() => setExpanded(s => ({ ...s, [g.gap_key]: !s[g.gap_key] }))}>
+                          {expanded[g.gap_key] ? "hide" : "examples (" + g.examples.length + ")"}
+                        </button>}
+                      {g.status === "addressed"
+                        ? <button className="link-btn" onClick={() => setStatus(g.gap_key, "open")}>reopen</button>
+                        : <button className="link-btn" onClick={() => setStatus(g.gap_key, "addressed")}>mark addressed</button>}
+                    </td>
+                  </tr>
+                  {expanded[g.gap_key] && g.examples.map((ex, i) => (
+                    <tr key={g.gap_key + "-ex-" + i} className="gap-example">
+                      <td></td>
+                      <td colSpan={6}><span className="mono gap-pct">{fmtTs(ex.ts)}</span> — {ex.text}</td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState("overview");
+  return (
+    <div>
+      <Header />
+      <Tabs current={tab} onChange={setTab} />
+      <main>
+        {tab === "overview"       && <Overview />}
+        {tab === "diagnoses"      && <Diagnoses />}
+        {tab === "resolution"     && <Resolution />}
+        {tab === "knowledge-gaps" && <KnowledgeGaps />}
+        {tab === "wiki"           && <Wiki />}
+        {tab === "export"         && <Export />}
+      </main>
+    </div>
+  );
+}
+
+// ---------- Wiki tab ----------
+
+function Wiki() {
+  const [tree, setTree] = useState(null);
+  const [selectedPath, setSelectedPath] = useState(null);
+  const [mode, setMode] = useState("view"); // view | edit | history | cited-by | commit-view
+  const [page, setPage] = useState(null);
+  const [editing, setEditing] = useState("");
+  const [history, setHistory] = useState(null);
+  const [citations, setCitations] = useState(null);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchMode, setSearchMode] = useState("literal");
+  const [searchResults, setSearchResults] = useState(null);
+  const [report, setReport] = useState(null); // {kind: 'lint'|'gaps', data}
+  const [toast, setToast] = useState(null);
+  const [historyCommit, setHistoryCommit] = useState(null);
+  const [historyPage, setHistoryPage] = useState(null);
+  const [sources, setSources] = useState(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [approveSource, setApproveSource] = useState(null);
+
+  function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 2200); }
+
+  useEffect(() => {
+    fetch("/admin/wiki/tree").then(r => r.json()).then(setTree);
+  }, []);
+
+  // Sources polling: refresh every 4s while any source is still processing.
+  useEffect(() => {
+    let timer;
+    function tick() {
+      fetch("/admin/ingest/sources").then(r => r.json()).then(d => {
+        setSources(d);
+        const inFlight = (d.sources || []).some(s => s.status === "uploaded" || s.status === "extracted");
+        timer = setTimeout(tick, inFlight ? 3000 : 12000);
+      }).catch(() => { timer = setTimeout(tick, 15000); });
+    }
+    tick();
+    return () => clearTimeout(timer);
+  }, [approveSource, showUpload]);
+
+  useEffect(() => {
+    if (!selectedPath) { setPage(null); return; }
+    setMode("view"); setHistory(null); setCitations(null); setHistoryPage(null); setHistoryCommit(null);
+    fetch("/admin/wiki/page?path=" + encodeURIComponent(selectedPath))
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then(p => { setPage(p); setEditing(p.raw); })
+      .catch(() => setPage(null));
+  }, [selectedPath]);
+
+  function runSearch() {
+    if (!searchQ.trim()) { setSearchResults(null); return; }
+    fetch("/admin/wiki/search?q=" + encodeURIComponent(searchQ) + "&mode=" + searchMode)
+      .then(r => r.json()).then(d => setSearchResults(d.results));
+  }
+
+  async function save() {
+    const r = await fetch("/admin/wiki/page?path=" + encodeURIComponent(selectedPath), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: editing }),
+    });
+    if (!r.ok) { showToast("Save failed"); return; }
+    const data = await r.json();
+    if (data.changed) {
+      showToast("Saved · " + (data.diff_summary || ""));
+      // re-fetch page + invalidate history
+      fetch("/admin/wiki/page?path=" + encodeURIComponent(selectedPath)).then(r => r.json()).then(p => { setPage(p); setEditing(p.raw); });
+      setHistory(null);
+      // also refresh tree if filename or fm changed
+      fetch("/admin/wiki/tree").then(r => r.json()).then(setTree);
+    } else {
+      showToast("No changes");
+    }
+    setMode("view");
+  }
+
+  async function deletePage() {
+    if (!confirm("Delete " + selectedPath + "?\n\nThis writes a 'deleted' row to wiki_page_history and removes the file from disk + git. Existing diagnosis records that cite this page will keep their snapshot.")) return;
+    const r = await fetch("/admin/wiki/page?path=" + encodeURIComponent(selectedPath), { method: "DELETE" });
+    if (!r.ok) { showToast("Delete failed"); return; }
+    showToast("Deleted");
+    setSelectedPath(null); setPage(null);
+    fetch("/admin/wiki/tree").then(r => r.json()).then(setTree);
+  }
+
+  function loadHistory() {
+    fetch("/admin/wiki/history?path=" + encodeURIComponent(selectedPath)).then(r => r.json()).then(d => setHistory(d.entries));
+  }
+
+  function loadCitedBy() {
+    fetch("/admin/wiki/cited-by?path=" + encodeURIComponent(selectedPath)).then(r => r.json()).then(d => setCitations(d.citations));
+  }
+
+  function loadCommit(commit) {
+    setHistoryCommit(commit);
+    fetch("/admin/wiki/commit?path=" + encodeURIComponent(selectedPath) + "&commit=" + commit)
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then(setHistoryPage)
+      .catch(() => showToast("Could not load that version"));
+  }
+
+  function runReport(kind) {
+    fetch("/admin/wiki/" + kind).then(r => r.json()).then(d => setReport({ kind, data: d }));
+  }
+
+  function downloadReport(kind) {
+    window.location.href = "/admin/wiki/" + kind + "?format=md";
+  }
+
+  const lineCount = useMemo(() => editing.split("\n").length, [editing]);
+
+  return (
+    <div>
+      <div className="toolbar">
+        <button className="primary" onClick={() => setShowUpload(true)} style={{background:"var(--epson-deep-blue)", color:"#fff", border:"none"}}>+ Upload new source</button>
+        <button onClick={() => runReport("lint")}>Run lint</button>
+        <button onClick={() => downloadReport("lint")}>↓ lint.md</button>
+        <button onClick={() => runReport("gaps")}>Gap analysis</button>
+        <button onClick={() => downloadReport("gaps")}>↓ gaps.md</button>
+        <span className="right"></span>
+        <span style={{color:"var(--text-muted)", fontSize:11}}>
+          {tree ? tree.file_count + " pages" : "loading…"}
+        </span>
+      </div>
+      <SourcesPanel sources={sources} onApprove={setApproveSource} onReject={async (sid) => {
+        if (!confirm("Reject this source? The proposed drafts will be deleted from disk.")) return;
+        const r = await fetch("/admin/ingest/source/" + sid + "/reject", { method: "POST" });
+        if (r.ok) { showToast("Rejected"); fetch("/admin/ingest/sources").then(r=>r.json()).then(setSources); }
+        else showToast("Reject failed");
+      }} />
+      <div className="wiki-layout">
+        <aside className="wiki-sidebar">
+          <div className="wiki-search">
+            <input
+              placeholder="search filenames + bodies"
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") runSearch(); }}
+            />
+            <select value={searchMode} onChange={e => setSearchMode(e.target.value)}>
+              <option value="literal">literal</option>
+              <option value="regex">regex</option>
+            </select>
+          </div>
+          <div className="wiki-tree">
+            {searchResults != null ? (
+              <SearchResults results={searchResults} onSelect={(p) => { setSelectedPath(p); setSearchResults(null); }} onClear={() => setSearchResults(null)} />
+            ) : (
+              tree ? <TreeNode node={tree} depth={0} selectedPath={selectedPath} onSelect={setSelectedPath} initiallyOpen /> : <div className="loading">Loading tree…</div>
+            )}
+          </div>
+        </aside>
+        <section className="wiki-content">
+          {!selectedPath ? (
+            <div className="wiki-empty">Select a page from the tree on the left to view it.<br /><br />Use the search box for keyword or regex matches across all 42 pages.</div>
+          ) : !page ? (
+            <div className="loading">Loading {selectedPath}…</div>
+          ) : (
+            <React.Fragment>
+              <div className="wiki-toolbar">
+                <span className="path">{selectedPath}</span>
+                {mode === "view" && (
+                  <React.Fragment>
+                    <button onClick={() => setMode("edit")}>Edit</button>
+                    <button onClick={() => { loadHistory(); setMode("history"); }}>History</button>
+                    <button onClick={() => { loadCitedBy(); setMode("cited-by"); }}>Cited by</button>
+                    <button className="danger" onClick={deletePage}>Delete</button>
+                  </React.Fragment>
+                )}
+                {mode === "edit" && (
+                  <React.Fragment>
+                    <button onClick={() => { setEditing(page.raw); setMode("view"); }}>Cancel</button>
+                    <button className="primary" onClick={save}>Save</button>
+                  </React.Fragment>
+                )}
+                {(mode === "history" || mode === "cited-by") && (
+                  <button onClick={() => { setMode("view"); setHistoryPage(null); setHistoryCommit(null); }}>← back to page</button>
+                )}
+              </div>
+
+              {mode === "view" && <PageView page={page} />}
+              {mode === "edit" && (
+                <div className="editor-wrap">
+                  <div className="editor-gutter" id="editor-gutter">
+                    {Array.from({length: lineCount}, (_, i) => <div key={i}>{i + 1}</div>)}
+                  </div>
+                  <textarea
+                    className="editor"
+                    value={editing}
+                    onChange={e => setEditing(e.target.value)}
+                    onScroll={e => { const g = document.getElementById("editor-gutter"); if (g) g.scrollTop = e.target.scrollTop; }}
+                    spellCheck={false}
+                  />
+                </div>
+              )}
+              {mode === "history" && (
+                <HistoryPanel
+                  history={history}
+                  onPickCommit={loadCommit}
+                  pickedCommit={historyCommit}
+                  pageAtCommit={historyPage}
+                />
+              )}
+              {mode === "cited-by" && <CitedByPanel citations={citations} />}
+            </React.Fragment>
+          )}
+        </section>
+      </div>
+      {report && <ReportModal report={report} onClose={() => setReport(null)} />}
+      {showUpload && <UploadModal onClose={() => setShowUpload(false)} onSuccess={(msg) => { setShowUpload(false); showToast(msg); fetch("/admin/ingest/sources").then(r=>r.json()).then(setSources); }} />}
+      {approveSource && <ApproveModal sourceId={approveSource} onClose={() => setApproveSource(null)} onApproved={(n) => { setApproveSource(null); showToast(`Approved ${n} page${n===1?"":"s"}`); fetch("/admin/ingest/sources").then(r=>r.json()).then(setSources); fetch("/admin/wiki/tree").then(r=>r.json()).then(setTree); }} />}
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+function SourcesPanel({ sources, onApprove, onReject }) {
+  if (!sources) return null;
+  const all = sources.sources || [];
+  const inflight = all.filter(s => ["uploaded", "extracted"].includes(s.status));
+  const ready = all.filter(s => s.status === "drafted");
+  const failed = (sources.failed || []);
+  const recent = all.filter(s => ["approved", "rejected"].includes(s.status)).slice(0, 5);
+  if (!inflight.length && !ready.length && !failed.length && !recent.length) return null;
+
+  function fmtTs(ts) {
+    if (!ts) return "";
+    let s = String(ts);
+    if (!/[Zz]|[+\-]\d{2}:?\d{2}$/.test(s)) s = s.replace(" ", "T") + "Z";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return String(ts);
+    const p = new Intl.DateTimeFormat("en-GB", { 
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false })
+      .formatToParts(d).reduce((a,x) => (a[x.type] = x.value, a), {});
+    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+  }
+  function row(s, label, cls, actions) {
+    return (
+      <div className="ingest-row" key={s.source_id}>
+        <div className="src">
+          <div className="name">{s.original_name} <span style={{color:"var(--text-muted)"}}>· {s.source_type}{s.authority ? " · " + s.authority : ""}</span></div>
+          <div className="meta">{s.source_id.slice(0, 12)}… · uploaded {fmtTs(s.uploaded_at)} UTC+3{s.notes ? " · " + s.notes.slice(0, 80) : ""}</div>
+          {s.status_detail && <div className="meta" style={{color: cls === "failed" ? "var(--error)" : "var(--text-muted)"}}>{s.status_detail}</div>}
+        </div>
+        <span className={"status-pill " + cls}>{label}</span>
+        <span>{actions}</span>
+      </div>
+    );
+  }
+
+  return (
+    <React.Fragment>
+      {inflight.length > 0 && (
+        <div className="ingest-panel">
+          <h3>Processing ({inflight.length})</h3>
+          {inflight.map(s => row(s, s.status === "uploaded" ? "extracting…" : "drafting…", "processing", <span style={{color:"var(--text-muted)", fontSize:11}}>—</span>))}
+        </div>
+      )}
+      {ready.length > 0 && (
+        <div className="ingest-panel">
+          <h3>Ready for review ({ready.length})</h3>
+          {ready.map(s => row(s, "ready", "ready",
+            <span style={{display:"flex", gap:6}}>
+              <button onClick={() => onApprove(s.source_id)} style={{padding:"5px 12px", background:"var(--epson-deep-blue)", color:"#fff", border:"none", borderRadius:4, cursor:"pointer", fontSize:12}}>Review →</button>
+              <button onClick={() => onReject(s.source_id)} style={{padding:"5px 12px", background:"var(--bg-canvas)", color:"var(--error)", border:"1px solid rgba(220,38,38,0.3)", borderRadius:4, cursor:"pointer", fontSize:12}}>Reject</button>
+            </span>
+          ))}
+        </div>
+      )}
+      {failed.length > 0 && (
+        <div className="ingest-panel">
+          <h3>Ingestion issues ({failed.length})</h3>
+          {failed.map(s => row(s, s.status.replace("_", " "), "failed",
+            <button onClick={() => onReject(s.source_id)} style={{padding:"5px 12px", background:"var(--bg-canvas)", color:"var(--text-secondary)", border:"1px solid var(--border-default)", borderRadius:4, cursor:"pointer", fontSize:12}}>Dismiss</button>
+          ))}
+        </div>
+      )}
+      {recent.length > 0 && (
+        <div className="ingest-panel">
+          <h3>Recent ({recent.length})</h3>
+          {recent.map(s => row(s, s.status, s.status === "approved" ? "approved" : "rejected", <span style={{color:"var(--text-muted)", fontSize:11}}>{s.status === "approved" ? "→ committed" : "drafts removed"}</span>))}
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+
+function UploadModal({ onClose, onSuccess }) {
+  const [file, setFile] = useState(null);
+  const [sourceType, setSourceType] = useState("manuals");
+  const [authority, setAuthority] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape" && !busy) onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, busy]);
+
+  async function submit() {
+    if (!file) { setErr("Pick a file"); return; }
+    setBusy(true); setErr(null);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("source_type", sourceType);
+    form.append("authority", authority);
+    form.append("notes", notes);
+    try {
+      const r = await fetch("/admin/ingest/upload", { method: "POST", body: form });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (r.status === 409 && body.detail && body.detail.existing_source) {
+          setErr("Duplicate: this file was already ingested as " + body.detail.existing_source.source_id.slice(0,12) + "… on " + body.detail.existing_source.uploaded_at);
+        } else {
+          setErr((body.detail && (body.detail.message || body.detail)) || "Upload failed");
+        }
+        setBusy(false);
+        return;
+      }
+      onSuccess(`Uploaded · processing in background (${body.source_id.slice(0,8)}…)`);
+    } catch (e) {
+      setErr("Upload failed: " + e.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div className="modal upload-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>Upload new source</h2>
+          <button className="close" onClick={onClose} disabled={busy}>close ✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="upload-form">
+            <div>
+              <label>File</label>
+              <input type="file" onChange={e => setFile(e.target.files[0])} accept=".pdf,.xlsx,.xlsm,.docx,.csv,.md,.txt" />
+              <div style={{fontSize:11, color:"var(--text-muted)", marginTop:4}}>PDF, Excel, Word, CSV, plain text or markdown. 100 MB limit.</div>
+            </div>
+            <div>
+              <label>Source type</label>
+              <select value={sourceType} onChange={e => setSourceType(e.target.value)}>
+                <option value="manuals">manuals (service manuals, training material)</option>
+                <option value="tis">tis (Technical Information notices)</option>
+                <option value="msd">msd (Dynamics 365 case exports)</option>
+                <option value="depot2">depot2 (repair-network reports)</option>
+                <option value="web">web (clippings, vendor / partner pages)</option>
+                <option value="other">other</option>
+              </select>
+            </div>
+            <div>
+              <label>Authority level</label>
+              <div className="auth-row">
+                {[["high","manufacturer / authoritative"], ["medium","partner / engineer"], ["low","web / informal"]].map(([v, lbl]) => (
+                  <label key={v} className="opt">
+                    <input type="radio" name="auth" checked={authority === v} onChange={() => setAuthority(v)} />
+                    <span>{v} <span style={{color:"var(--text-muted)"}}>({lbl})</span></span>
+                  </label>
+                ))}
+                <label className="opt">
+                  <input type="radio" name="auth" checked={authority === ""} onChange={() => setAuthority("")} />
+                  <span style={{color:"var(--text-muted)"}}>(unspecified)</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <label>Notes</label>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. From Sato-san, 2026-05-14 email re: PPB investigation"></textarea>
+            </div>
+            {err && <div className="error-box">{err}</div>}
+            <div style={{display:"flex", gap:10, justifyContent:"flex-end", marginTop:8}}>
+              <button onClick={onClose} disabled={busy} style={{padding:"10px 18px", background:"var(--bg-canvas)", border:"1px solid var(--border-default)", borderRadius:6, cursor:"pointer", color:"var(--text-secondary)"}}>Cancel</button>
+              <button className="btn-primary" onClick={submit} disabled={busy || !file}>{busy ? "Uploading…" : "Upload"}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ApproveModal({ sourceId, onClose, onApproved }) {
+  const [data, setData] = useState(null);
+  const [selections, setSelections] = useState({}); // index -> { include, destination }
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  useEffect(() => {
+    fetch("/admin/ingest/source/" + sourceId).then(r => r.json()).then(d => {
+      setData(d);
+      const sel = {};
+      (d.drafts || []).forEach((p, i) => {
+        sel[i] = { include: true, destination: p.proposed_destination };
+      });
+      setSelections(sel);
+    });
+  }, [sourceId]);
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape" && !busy) onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, busy]);
+
+  if (!data) return (
+    <div className="modal-back"><div className="modal approve-modal"><div className="modal-body"><div className="loading">Loading draft…</div></div></div></div>
+  );
+
+  async function approveSelected() {
+    setBusy(true); setErr(null);
+    const payload = {
+      selections: (data.drafts || []).map((p, i) => ({
+        draft_path: p.draft_path,
+        destination: selections[i].destination,
+        include: selections[i].include,
+      })),
+    };
+    try {
+      const r = await fetch("/admin/ingest/source/" + sourceId + "/approve", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErr((body.detail && (body.detail.message || body.detail)) || "Approve failed");
+        setBusy(false);
+        return;
+      }
+      onApproved(body.approved_count || 0);
+    } catch (e) { setErr("Network error"); setBusy(false); }
+  }
+
+  const drafts = data.drafts || [];
+  const selectedCount = Object.values(selections).filter(s => s.include).length;
+
+  return (
+    <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <div className="modal approve-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <h2>Review drafts · {data.original_name}</h2>
+            <div style={{fontSize:11, color:"var(--text-muted)", marginTop:2, fontFamily:"var(--font-mono)"}}>
+              source {sourceId.slice(0, 12)}… · {drafts.length} proposed page{drafts.length === 1 ? "" : "s"}
+              {data.status_detail ? " · " + data.status_detail.slice(0, 120) : ""}
+            </div>
+          </div>
+          <button className="close" onClick={onClose} disabled={busy}>close ✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="draft-banner">
+            <strong>DRAFT — not yet approved.</strong> These pages are not consulted by the diagnose pipeline.
+            Edit destinations below as needed, uncheck any you don't want, then approve.
+          </div>
+          {drafts.length === 0 && <div className="empty">The drafter produced no usable pages from this source.</div>}
+          {drafts.map((p, i) => {
+            const sel = selections[i] || { include: true, destination: p.proposed_destination };
+            return (
+              <div key={i} className={"draft-card" + (sel.include ? "" : " excluded")}>
+                <div className="draft-card-head">
+                  <input type="checkbox" checked={sel.include} onChange={e => setSelections({...selections, [i]: {...sel, include: e.target.checked}})} />
+                  <div className="dest-row">
+                    <span className="label">→</span>
+                    <input
+                      value={sel.destination}
+                      onChange={e => setSelections({...selections, [i]: {...sel, destination: e.target.value}})}
+                      disabled={!sel.include}
+                    />
+                  </div>
+                  <span className="badge muted" style={{textTransform:"capitalize"}}>{p.frontmatter && p.frontmatter.type || "?"}</span>
+                </div>
+                <div className="draft-card-body">
+                  <div className="fm-block">{JSON.stringify(p.frontmatter, null, 2)}</div>
+                  <div className="preview" dangerouslySetInnerHTML={{__html: window.marked ? window.marked.parse(p.body || "") : "<pre>" + (p.body || "") + "</pre>"}}></div>
+                </div>
+              </div>
+            );
+          })}
+          {err && <div className="error-box">{err}</div>}
+          <div style={{display:"flex", gap:10, justifyContent:"flex-end", marginTop:14, paddingTop:14, borderTop:"1px solid var(--border-default)"}}>
+            <button onClick={onClose} disabled={busy} style={{padding:"10px 18px", background:"var(--bg-canvas)", border:"1px solid var(--border-default)", borderRadius:6, cursor:"pointer", color:"var(--text-secondary)"}}>Cancel</button>
+            <button className="btn-primary" onClick={approveSelected} disabled={busy || selectedCount === 0}>{busy ? "Approving…" : `Approve ${selectedCount} of ${drafts.length}`}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TreeNode({ node, depth, selectedPath, onSelect, initiallyOpen }) {
+  const [open, setOpen] = useState(initiallyOpen || depth < 2);
+  if (node.type === "file") {
+    return (
+      <div
+        className={"tree-file" + (selectedPath === node.path ? " active" : "")}
+        style={{paddingLeft: 16 + depth * 12}}
+        onClick={() => onSelect(node.path)}
+      >
+        <span>📄</span>
+        <span>{node.name.replace(/\.md$/, "")}</span>
+        {node.fm_type && <span className={"typetag " + node.fm_type}>{node.fm_type}</span>}
+      </div>
+    );
+  }
+  return (
+    <div className="tree-node" style={{paddingLeft: depth === 0 ? 0 : 4}}>
+      <div className="tree-folder" onClick={() => setOpen(!open)} style={{paddingLeft: depth * 12}}>
+        <span className={"chev" + (open ? " open" : "")}>›</span>
+        <span>📁</span>
+        <span className="fname">{node.name}</span>
+        <span className="count">({node.file_count})</span>
+      </div>
+      {open && (node.children || []).map((c, i) => (
+        <TreeNode key={i} node={c} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
+      ))}
+    </div>
+  );
+}
+
+function SearchResults({ results, onSelect, onClear }) {
+  return (
+    <div>
+      <div style={{display:"flex", justifyContent:"space-between", marginBottom:8, fontSize:11, color:"var(--text-secondary)"}}>
+        <span>{results.length} matches</span>
+        <span style={{cursor:"pointer", color:"var(--epson-deep-blue)"}} onClick={onClear}>clear ✕</span>
+      </div>
+      {results.length === 0 && <div className="empty">No matches.</div>}
+      {results.map((r, i) => (
+        <div key={i} className="tree-file" onClick={() => onSelect(r.path)} style={{flexDirection:"column", alignItems:"flex-start", padding:"6px 8px", borderBottom:"1px solid var(--border-default)"}}>
+          <div style={{fontFamily:"var(--font-mono)", fontSize:12, color:"var(--text-primary)"}}>{r.path}</div>
+          {r.body_matches.slice(0, 1).map((b, j) => (
+            <div key={j} style={{fontSize:11, color:"var(--text-muted)", marginTop:2}}>…{b.snippet}…</div>
+          ))}
+          <div style={{fontSize:10, color:"var(--text-muted)", marginTop:2}}>{r.match_count} match{r.match_count === 1 ? "" : "es"}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PageView({ page }) {
+  const fm = page.frontmatter || {};
+  const fmEntries = Object.entries(fm);
+  const html = useMemo(() => {
+    if (!window.marked) return "<pre>" + (page.body || "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])) + "</pre>";
+    try { return window.marked.parse(page.body || ""); } catch (e) { return "<pre>" + page.body + "</pre>"; }
+  }, [page.body]);
+  return (
+    <React.Fragment>
+      {fmEntries.length > 0 && (
+        <div className="wiki-fm">
+          {fmEntries.map(([k, v]) => (
+            <div className="fm-row" key={k}>
+              <span className="fm-k">{k}</span>
+              <span className="fm-v">{Array.isArray(v) ? "[" + v.join(", ") + "]" : (v == null ? "—" : String(v))}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="markdown-rendered" dangerouslySetInnerHTML={{__html: html}} />
+    </React.Fragment>
+  );
+}
+
+function HistoryPanel({ history, onPickCommit, pickedCommit, pageAtCommit }) {
+  if (!history) return <div className="loading">Loading history…</div>;
+  return (
+    <div>
+      <div className="side-panel">
+        <h3>Edit history ({history.length} {history.length === 1 ? "entry" : "entries"})</h3>
+        {history.length === 0 && <div className="empty">No history.</div>}
+        {history.map((h, i) => (
+          <div className="history-row" key={i}>
+            <span className="ts">{fmtTs(h.ts)}</span>
+            <span><span className={"pill " + (h.origin || "original")}>{h.origin}</span></span>
+            <span className="commit" onClick={() => onPickCommit(h.git_commit_id)}>{h.git_commit_short}</span>
+            <span className="summary">
+              <strong style={{textTransform:"capitalize", color:"var(--text-secondary)"}}>{h.change_type}</strong>
+              {h.diff_summary ? ": " + h.diff_summary : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+      {pageAtCommit && (
+        <div className="side-panel">
+          <h3>Page at commit {pickedCommit && pickedCommit.slice(0,8)}…</h3>
+          <PageView page={pageAtCommit} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CitedByPanel({ citations }) {
+  if (!citations) return <div className="loading">Loading citations…</div>;
+  if (citations.length === 0) return <div className="empty">No diagnoses have cited this page yet.</div>;
+  return (
+    <div className="side-panel">
+      <h3>Cited by ({citations.length} diagnos{citations.length === 1 ? "is" : "es"})</h3>
+      <div style={{fontSize:11, color:"var(--text-muted)", marginBottom:8}}>Click a row to open it in the Diagnoses tab.</div>
+      {citations.map((c, i) => (
+        <div
+          className="citation-row"
+          key={i}
+          onClick={() => { window.location.hash = "diagnosis=" + c.diagnosis_id; window.dispatchEvent(new HashChangeEvent("hashchange")); }}
+        >
+          <span style={{fontFamily:"var(--font-mono)", color:"var(--text-secondary)", fontSize:11}}>{fmtTs(c.ts)}</span>
+          <span style={{fontFamily:"var(--font-mono)", fontSize:11, color:"var(--text-muted)"}}>{c.diagnosis_id.slice(0, 12)}…</span>
+          <span><span className="badge muted">{c.depth_tier}</span></span>
+          <span>{feedbackBadge(c.feedback_status)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReportModal({ report, onClose }) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="modal-back" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal report" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>{report.kind === "lint" ? "Lint report" : "Gap analysis"} · scanned {report.data.scanned_pages} pages</h2>
+          <button className="close" onClick={onClose}>close ✕</button>
+        </div>
+        <div className="modal-body report-section">
+          {report.kind === "lint" ? <LintReportContent r={report.data} /> : <GapsReportContent r={report.data} />}
+          <div style={{marginTop:16, paddingTop:12, borderTop:"1px solid var(--border-default)", display:"flex", gap:10}}>
+            <a href={"/admin/wiki/" + report.kind + "?format=md"} download style={{textDecoration:"none"}}>
+              <button className="btn-primary">↓ Download as markdown</button>
+            </a>
+            <button onClick={onClose} style={{padding:"10px 18px", background:"var(--bg-canvas)", border:"1px solid var(--border-default)", borderRadius:6, cursor:"pointer", color:"var(--text-secondary)"}}>Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LintReportContent({ r }) {
+  return (
+    <React.Fragment>
+      <h3>Orphan pages ({r.orphans.length})</h3>
+      {r.orphans.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.orphans.map((o, i) => <li key={i}><code>{o.path}</code> ({o.fm_type || "—"})</li>)}</ul>
+      )}
+      <h3>Dead wiki links ({r.dead_links.length})</h3>
+      {r.dead_links.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.dead_links.map((d, i) => <li key={i}><code>{d.source}</code> → <code>{d.target}</code></li>)}</ul>
+      )}
+      <h3>Stale pages — last_updated &gt;90d ({r.stale_pages.length})</h3>
+      {r.stale_pages.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.stale_pages.map((s, i) => <li key={i}><code>{s.path}</code> · last_updated {s.last_updated}</li>)}</ul>
+      )}
+    </React.Fragment>
+  );
+}
+
+function GapsReportContent({ r }) {
+  return (
+    <React.Fragment>
+      <h3>Coverage gaps — models with &lt;5 pages ({r.coverage_low_models.length})</h3>
+      {r.coverage_low_models.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.coverage_low_models.map((c, i) => <li key={i}><strong>{c.model}</strong> — {c.page_count} page{c.page_count === 1 ? "" : "s"}</li>)}</ul>
+      )}
+      <h3>Error codes with low source_count &lt;3 ({r.error_codes_low_source_count.length})</h3>
+      {r.error_codes_low_source_count.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.error_codes_low_source_count.map((e, i) => <li key={i}><code>{e.path}</code> · code <code>{e.code}</code> · source_count {e.source_count}</li>)}</ul>
+      )}
+      <h3>Error code pages missing a resolution sequence ({r.resolution_missing.length})</h3>
+      {r.resolution_missing.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.resolution_missing.map((x, i) => <li key={i}><code>{x.path}</code> · code <code>{x.code}</code></li>)}</ul>
+      )}
+      <h3>Models without environment-specific pages ({r.environment_gaps.length})</h3>
+      {r.environment_gaps.length === 0 ? <div className="empty" style={{padding:8, textAlign:"left"}}>None.</div> : (
+        <ul>{r.environment_gaps.map((e, i) => <li key={i}><strong>{e.model}</strong></li>)}</ul>
+      )}
+      {(r.notes || []).map((n, i) => (
+        <div key={i} style={{fontSize:11, color:"var(--text-muted)", marginTop:14, fontStyle:"italic"}}>{n}</div>
+      ))}
+    </React.Fragment>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>

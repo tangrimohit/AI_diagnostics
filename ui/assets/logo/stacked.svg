@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="AKARI">
+  <style>
+    .dot   { fill: var(--logo-dot, #D69D3F); }
+    .kanji { fill: var(--logo-ink, #1A1A1A); font-family: "Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif; font-weight: 400; }
+    .mark  { fill: var(--logo-ink, #1A1A1A); font-family: "Inter","Segoe UI","Helvetica Neue",sans-serif; font-weight: 200; letter-spacing: 6px; }
+  </style>
+  <circle class="dot" cx="120" cy="62" r="32" opacity="0.10" />
+  <circle class="dot" cx="120" cy="62" r="20" opacity="0.25" />
+  <circle class="dot" cx="120" cy="62" r="11" />
+  <text class="kanji" x="120" y="142" font-size="36" text-anchor="middle">明かり</text>
+  <text class="mark"  x="120" y="186" font-size="22" text-anchor="middle">AKARI</text>
+</svg>

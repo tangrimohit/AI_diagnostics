@@ -1,0 +1,59 @@
+# Data privacy — never commit raw sources
+raw/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Environment
+.env
+.env.local
+
+# Node (if we add JS tooling later)
+node_modules/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+*.err
+
+# Local data stores (SQLite, embeddings, audit DBs)
+data/
+backup/
+
+# Local outputs that shouldn't be in git
+wiki/outputs/charts/*.png
+
+# Generated MSD case digests (derived from raw/ customer data; regenerable via
+# ingest/digest_cases.py). Keep customer-derived content out of git per opsec.
+ingest/digests/cases/
+ingest/digests/platforms/
+ingest/digests/cases_index.md
+ingest/digests/grounding/
+# Generated draft mirror (regenerable via ingest/build_wiki.py; live pages are the source of truth)
+wiki/_drafts/gen/
+
+ingest/digests/manual_grounding/
+# Generated training-doc grounding (derived from internal training PDFs/PPTX/XLSX; regenerable via ingest/extract_training.py)
+ingest/digests/training_grounding/
+bench/images/
+
+# local-only notes and tooling, never in the repo
+STATUS.md
+BUILD_FROM_SCRATCH.md
+*.pptx
+bench/

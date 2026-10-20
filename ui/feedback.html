@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>AKARI — Feedback</title>
+<style>
+  :root {
+    --epson-deep-blue: #10218B;
+    --epson-blue: #003399;
+    --bg-canvas: #FFFFFF;
+    --bg-panel: #F4F5F7;
+    --bg-subtle: #FAFBFC;
+    --border-default: #D0D5DD;
+    --text-primary: #1A1A1A;
+    --text-secondary: #4A5568;
+    --text-muted: #6B7280;
+    --success: #0F9D58;
+    --warning: #F59E0B;
+    --error: #DC2626;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --shadow-card: 0 1px 3px rgba(16, 33, 139, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 28px; }
+  header {
+    border-bottom: 1px solid var(--border-default);
+    padding: 18px 28px;
+    background: var(--bg-canvas);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--epson-deep-blue);
+    letter-spacing: 0.5px;
+  }
+  header .sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  header a {
+    color: var(--epson-deep-blue);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  header a:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--epson-deep-blue);
+    margin: 0 0 14px 0;
+  }
+  .notice {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-default);
+    border-left: 3px solid var(--epson-deep-blue);
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    line-height: 1.55;
+  }
+  .label { font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+  textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    min-height: 80px;
+    resize: vertical;
+  }
+  textarea:focus { border-color: var(--epson-deep-blue); }
+  .form-group { margin-bottom: 14px; }
+
+  .question { font-size: 14px; margin-bottom: 10px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .fb-btn {
+    padding: 12px 16px;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fb-btn:hover:not(.active) { background: var(--bg-subtle); }
+  .fb-btn.active.worked { background: rgba(15, 157, 88, 0.12); border-color: var(--success); color: var(--success); }
+  .fb-btn.active.didnt { background: rgba(220, 38, 38, 0.10); border-color: var(--error); color: var(--error); }
+
+  .actions { display: flex; gap: 10px; align-items: center; }
+  .btn-primary {
+    padding: 10px 22px;
+    background: var(--epson-deep-blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--epson-blue); }
+  .btn-primary:disabled { background: var(--border-default); color: var(--text-muted); cursor: not-allowed; }
+  .btn-danger {
+    padding: 10px 18px;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    color: var(--error);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-danger:hover { background: rgba(220, 38, 38, 0.08); border-color: var(--error); }
+
+  .state {
+    padding: 24px;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    box-shadow: var(--shadow-card);
+    text-align: center;
+  }
+  .state.ok { color: var(--success); }
+  .state.warn { color: var(--warning); }
+  .state.err { color: var(--error); }
+  .state h2 { font-size: 17px; margin: 0 0 10px 0; font-weight: 600; }
+  .state p { font-size: 14px; margin: 0; color: var(--text-secondary); }
+
+  .error-box {
+    padding: 12px 16px;
+    background: rgba(220, 38, 38, 0.06);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-left: 3px solid var(--error);
+    border-radius: 6px;
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 14px;
+  }
+  .meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-default);
+  }
+  .meta strong { color: var(--text-secondary); font-weight: 500; }
+
+  footer {
+    text-align: right;
+    padding: 14px 28px;
+    border-top: 1px solid var(--border-default);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Read-only initial feedback + append-only update thread */
+  .verdict { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .verdict.worked { background: rgba(15, 157, 88, 0.12); color: var(--success); }
+  .verdict.didnt { background: rgba(220, 38, 38, 0.10); color: var(--error); }
+  .ro-field { margin-bottom: 10px; }
+  .ro-field .k { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+  .ro-field .v { font-size: 14px; white-space: pre-wrap; }
+  .locked-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .thread-item { padding: 10px 12px; background: var(--bg-subtle); border: 1px solid var(--border-default); border-radius: 6px; margin-bottom: 8px; }
+  .thread-ts { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .section-h { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 18px 0 10px; }
+  .disclaimer { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-default); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>AKARI</h1>
+    <div class="sub">Feedback</div>
+  </div>
+  <a href="/">← Back to diagnose</a>
+</header>
+<div id="root" class="page">Loading…</div>
+<footer>Epson Middle East — Internal Tool</footer>
+<script>
+(async function() {
+  const root = document.getElementById("root");
+  const DISCLAIMER = "This diagnosis is generated by AKARI based on documented failure patterns and technical references. Recommendations are for technician guidance only. Actual repair times, costs, and parts availability vary by region, model revision, and individual case. Always verify with current service documentation and authorized parts catalogs before performing repairs. AKARI is a decision-support tool, not a substitute for qualified technician judgment.";
+  const diagnosisId = window.location.pathname.split("/").filter(Boolean).pop();
+  if (!diagnosisId) {
+    root.innerHTML = '<div class="state err"><h2>Invalid link</h2><p>No diagnosis identifier in URL.</p></div>';
+    return;
+  }
+
+  let state = null;
+  try {
+    const r = await fetch("/api/feedback/" + encodeURIComponent(diagnosisId));
+    state = await r.json();
+  } catch (e) {
+    root.innerHTML = '<div class="state err"><h2>Could not load feedback</h2><p>Please refresh and try again.</p></div>';
+    return;
+  }
+
+  // Pull diagnosis context from localStorage in case we need to submit first-time feedback.
+  let local = null;
+  try {
+    local = JSON.parse(localStorage.getItem("akari_diagnosis_" + diagnosisId) || "null");
+  } catch (e) {}
+
+  const status = state && state.status;
+
+  if (status === "deleted") {
+    root.innerHTML = '<div class="state warn"><h2>Feedback removed</h2><p>This feedback record was removed by an administrator.</p></div>';
+    return;
+  }
+  if (status === "expired") {
+    root.innerHTML = '<div class="state warn"><h2>Feedback window closed</h2><p>This link expired 90 days after the diagnosis. The record itself is still on file; ask an administrator if you need to update it.</p></div>';
+    return;
+  }
+  if (status === "not_submitted" && !local) {
+    root.innerHTML = '<div class="state err"><h2>Feedback not available on this device</h2><p>To submit feedback for this diagnosis the first time, return to the device where you ran the diagnosis. After your first submission, this link will work from any device.</p></div>';
+    return;
+  }
+
+  render(state, local);
+
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  }
+  function fmtTs(ts) {
+    if (!ts) return "";
+    let s = String(ts);
+    if (!/[Zz]|[+\-]\d{2}:?\d{2}$/.test(s)) s = s.replace(" ", "T") + "Z";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return escapeHtml(String(ts));
+    const p = new Intl.DateTimeFormat("en-GB", { 
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false })
+      .formatToParts(d).reduce((a,x) => (a[x.type] = x.value, a), {});
+    return escapeHtml(`${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`);
+  }
+  function disclaimerHtml() { return '<div class="disclaimer">' + escapeHtml(DISCLAIMER) + '</div>'; }
+  function threadHtml(updates) {
+    if (!updates || !updates.length) return '<div class="locked-note">No follow-up updates yet.</div>';
+    return updates.map(u =>
+      '<div class="thread-item"><div class="thread-ts">' + fmtTs(u.update_ts) + ' UTC+3</div><div>' + escapeHtml(u.text) + '</div></div>'
+    ).join("");
+  }
+
+  function render(state, local) {
+    if (state.status === "submitted") renderSubmitted(state);
+    else renderInitialForm(local);
+  }
+
+  // ---- First-time feedback (immutable once submitted) ----
+  function renderInitialForm(local) {
+    root.innerHTML = `
+      <div class="card">
+        <h2>Share your feedback</h2>
+        <div class="notice">Submitting saves your problem description and the diagnosis for service improvement. Your first feedback is kept on file and cannot be edited or removed afterwards, but you can always <strong>add follow-up updates</strong>.</div>
+        <div class="question">Did this diagnosis resolve the issue?</div>
+        <div class="row">
+          <button id="btn-worked" class="fb-btn">✓ Worked</button>
+          <button id="btn-didnt" class="fb-btn">✗ Didn't work</button>
+        </div>
+        <div id="fb-fields" style="display:none">
+          <div class="form-group">
+            <label class="label">What actually fixed it? (optional)</label>
+            <textarea id="what-fixed" placeholder="e.g. Replaced the main board after re-seating the lamp connectors"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="label">Additional notes (optional)</label>
+            <textarea id="notes"></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn-primary" id="submit-btn">Submit feedback</button>
+          </div>
+          <div class="locked-note">Once submitted, this initial response is locked. You'll get a confirmation email and can add updates any time.</div>
+        </div>
+        <div id="err"></div>
+      </div>
+    `;
+    let workedState = null;
+    const btnWorked = document.getElementById("btn-worked");
+    const btnDidnt = document.getElementById("btn-didnt");
+    const fields = document.getElementById("fb-fields");
+    const submitBtn = document.getElementById("submit-btn");
+    const errBox = document.getElementById("err");
+
+    function pickWorked(v) {
+      workedState = v;
+      btnWorked.classList.toggle("active", v === true);
+      btnWorked.classList.toggle("worked", v === true);
+      btnDidnt.classList.toggle("active", v === false);
+      btnDidnt.classList.toggle("didnt", v === false);
+      fields.style.display = "";
+    }
+    btnWorked.onclick = () => pickWorked(true);
+    btnDidnt.onclick = () => pickWorked(false);
+
+    submitBtn.onclick = async () => {
+      if (workedState === null) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving…";
+      errBox.innerHTML = "";
+      const body = {
+        worked: workedState,
+        what_fixed_it: (document.getElementById("what-fixed").value || "").trim() || null,
+        notes: (document.getElementById("notes").value || "").trim() || null,
+        diagnosis_response: local.diagnosis_response,
+        problem_text: local.problem_text,
+        depth_tier: local.depth_tier,
+        wiki_pages_used: local.wiki_pages_used || [],
+        diagnosis_ts: local.diagnosis_ts,
+      };
+      try {
+        const r = await fetch("/api/feedback/" + encodeURIComponent(diagnosisId), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error((await r.text().catch(() => "")) || ("HTTP " + r.status));
+        // Re-fetch so the locked view + update box render immediately.
+        const fresh = await (await fetch("/api/feedback/" + encodeURIComponent(diagnosisId))).json();
+        renderSubmitted(fresh, true);
+      } catch (e) {
+        errBox.innerHTML = '<div class="error-box">We could not save your feedback. Please try again.</div>';
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit feedback";
+      }
+    };
+  }
+
+  // ---- Locked initial feedback + append-only updates ----
+  function renderSubmitted(state, justSubmitted) {
+    const worked = state.worked === true;
+    const verdict = worked
+      ? '<span class="verdict worked">✓ Resolved the issue</span>'
+      : '<span class="verdict didnt">✗ Did not resolve</span>';
+    const whatFixed = state.what_fixed_it ? `
+      <div class="ro-field"><div class="k">What fixed it</div><div class="v">${escapeHtml(state.what_fixed_it)}</div></div>` : "";
+    const notes = state.notes ? `
+      <div class="ro-field"><div class="k">Notes</div><div class="v">${escapeHtml(state.notes)}</div></div>` : "";
+
+    root.innerHTML = `
+      ${justSubmitted ? '<div class="state ok" style="margin-bottom:18px"><h2>✓ Thank you</h2><p>Your feedback is recorded. A confirmation has been emailed to you. Your original response is now locked, but you can add updates below any time.</p></div>' : ""}
+      <div class="card">
+        <h2>Your feedback</h2>
+        <div class="ro-row" style="margin-bottom:12px">${verdict}</div>
+        ${whatFixed}
+        ${notes}
+        <div class="meta">
+          <div><strong>Submitted:</strong> ${fmtTs(state.feedback_ts)} UTC+3</div>
+        </div>
+        <div class="locked-note">This initial feedback is locked and cannot be edited or removed.</div>
+
+        <div class="section-h">Follow-up updates</div>
+        <div id="thread">${threadHtml(state.updates)}</div>
+        <div class="form-group" style="margin-top:12px">
+          <label class="label">Add an update (anything new with this case)</label>
+          <textarea id="update-text" placeholder="e.g. Issue came back after 3 days; replaced the ballast and it held."></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" id="add-update-btn">Add update</button>
+        </div>
+        <div id="err"></div>
+        ${disclaimerHtml()}
+      </div>
+    `;
+    const addBtn = document.getElementById("add-update-btn");
+    const errBox = document.getElementById("err");
+    const ta = document.getElementById("update-text");
+
+    addBtn.onclick = async () => {
+      const text = (ta.value || "").trim();
+      if (!text) { errBox.innerHTML = '<div class="error-box">Write something to add first.</div>'; return; }
+      addBtn.disabled = true;
+      addBtn.textContent = "Adding…";
+      errBox.innerHTML = "";
+      try {
+        const r = await fetch("/api/feedback/" + encodeURIComponent(diagnosisId) + "/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        if (!r.ok) throw new Error((await r.text().catch(() => "")) || ("HTTP " + r.status));
+        const fresh = await (await fetch("/api/feedback/" + encodeURIComponent(diagnosisId))).json();
+        renderSubmitted(fresh);
+      } catch (e) {
+        errBox.innerHTML = '<div class="error-box">We could not add your update. Please try again.</div>';
+        addBtn.disabled = false;
+        addBtn.textContent = "Add update";
+      }
+    };
+  }
+})();
+</script>
+</body>
+</html>

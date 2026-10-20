@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AKARI">
+  <!-- Dark-context mark: brighter amber + paper-colored kanji. -->
+  <circle cx="32" cy="20" r="14" fill="#FFC865" opacity="0.10" />
+  <circle cx="32" cy="20" r="9"  fill="#FFC865" opacity="0.25" />
+  <circle cx="32" cy="20" r="5"  fill="#FFC865" />
+  <text x="32" y="58" font-size="28" text-anchor="middle"
+        font-family="Noto Sans JP, Hiragino Sans, Yu Gothic, sans-serif"
+        font-weight="400" fill="#FAF8F4">明</text>
+</svg>
